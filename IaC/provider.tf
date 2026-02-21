@@ -4,7 +4,11 @@ terraform {
       source = "databricks/databricks"
     }
     aws = {
-      region = "us-east-2"
+      source  = "hashicorp/aws"
     }
   }
+}
+
+provider "aws" {  
+  region = "us-east-2"
 }
