@@ -42,8 +42,8 @@ resource "databricks_job" "bronze_job" {
   }
 
   email_notifications {
-    on_success = [ var.emails ]
-    on_failure = [ var.emails ]
+    on_success = var.emails
+    on_failure = var.emails
   }
 }
 
@@ -75,8 +75,8 @@ resource "databricks_job" "silver_job" {
   }
 
   email_notifications {
-    on_success = [ var.emails ]
-    on_failure = [ var.emails ]
+    on_success = var.emails
+    on_failure = var.emails
   }
 }
 
@@ -104,8 +104,8 @@ resource "databricks_job" "problema_gold_job" {
   }
 
   email_notifications {
-    on_success = [ var.emails ]
-    on_failure = [ var.emails ]
+    on_success = var.emails
+    on_failure = var.emails
   }
 }
 
@@ -133,8 +133,8 @@ resource "databricks_job" "reclamacao_gold_job" {
   }
 
   email_notifications {
-    on_success = [ var.emails ]
-    on_failure = [ var.emails ]
+    on_success = var.emails
+    on_failure = var.emails
   }
 }
 
@@ -162,8 +162,8 @@ resource "databricks_job" "resposta_gold_job" {
   }
 
   email_notifications {
-    on_success = [ var.emails ]
-    on_failure = [ var.emails ]
+    on_success = var.emails
+    on_failure = var.emails
   }
 }
 
@@ -191,7 +191,7 @@ resource "databricks_job" "uf_gold_job" {
   }
 
   email_notifications {
-    on_success = [ var.emails ]
-    on_failure = [ var.emails ]
+    on_success = var.emails
+    on_failure = var.emails
   }
 }
