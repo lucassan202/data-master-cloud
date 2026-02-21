@@ -20,7 +20,10 @@ on:
         required: true
 jobs:
   terraform:
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     env:      
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
