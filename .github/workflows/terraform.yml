@@ -24,11 +24,12 @@ on:
 
 permissions:
   id-token: write
-  contents: read        
+  contents: read     
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }} 
+    environment: dev 
     #defaults:
     #  run:
     #    shell: bash
