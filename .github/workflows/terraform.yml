@@ -1,22 +1,30 @@
 name: 'Databricks Terraform CI/CD'
 
 on:
-  push:
-    branches:
-      - develop
-
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      aws-assume-role-arn:
+        type: string
+        required: true
+      aws-region:
+        type: string
+        required: true
+      aws-statefile-s3-bucket:
+        type: string
+        required: true
+      aws-lock-dynamodb-table:
+        type: string
+        required: true
 jobs:
   terraform:
-    runs-on: ubuntu-latest
-    environment: dev
+    runs-on: ubuntu-latest    
     env:      
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
-    
-    permissions:
-      contents: 'read'
-      id-token: 'write' # Explicitly grant OIDC token write permission      
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}  
 
     steps:
       - name: Checkout
@@ -28,18 +36,37 @@ jobs:
           # Optional: specify terraform version
           terraform_version: 1.8.2
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-assume-role-arn }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ inputs.aws-region }}
+
       - name: Install Databricks CLI
         uses: databricks/setup-cli@main
 
       - name: Terraform Init
-        run: cd IaC && terraform init
+        run: cd IaC && terraform init \
+            -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
+            -backend-config="key=${{ github.event.repository.name }}" \
+            -backend-config="region=${{ inputs.aws-region }}" \
+            -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
+      
+      - name: Terraform Validate
+        run: terraform validate
+
         # If using a remote backend, ensure credentials are provided via environment variables or configuration
 
       #- name: Terraform Destroy
       #  run: cd IaC && terraform destroy -auto-approve
       
       - name: Terraform Plan
-        run: cd IaC && terraform plan
+        run: cd IaC && 
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          terraform plan -out="${{ inputs.environment }}.plan"
 
       - name: Terraform Apply
-        run: cd IaC && terraform apply -auto-approve
+        run: cd IaC &&
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          terraform apply "${{ inputs.environment }}.plan"
