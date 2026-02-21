@@ -1,26 +1,26 @@
 name: 'Databricks Terraform CI/CD'
 
 on:
-  # workflow_call:
-    # inputs:
-      # environment:
-        # type: string
-        # required: true
-      # aws-assume-role-arn:
-        # type: string
-        # required: true
-      # aws-region:
-        # type: string
-        # required: true
-      # aws-statefile-s3-bucket:
-        # type: string
-        # required: true
-      # aws-lock-dynamodb-table:
-        # type: string
-        # required: true
-  push:
-    branches:
-      - develop
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      aws-assume-role-arn:
+        type: string
+        required: true
+      aws-region:
+        type: string
+        required: true
+      aws-statefile-s3-bucket:
+        type: string
+        required: true
+      aws-lock-dynamodb-table:
+        type: string
+        required: true
+  # push:
+    # branches:
+      # - develop
 
 permissions:
   id-token: write

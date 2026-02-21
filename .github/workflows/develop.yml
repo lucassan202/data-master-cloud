@@ -3,7 +3,7 @@ name: "DEV DEPLOY"
 on:
   push:
     branches:
-      - develop12
+      - develop
 
 permissions:
   id-token: write
