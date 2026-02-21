@@ -11,8 +11,8 @@ jobs:
     environment: dev
     env:
       DATABRICKS_AUTH_TYPE: github-oidc
-      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_HOST: "teste" #${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,5 +33,5 @@ jobs:
       - name: Terraform Plan
         run: cd IaC && terraform plan
 
-      - name: Terraform Apply        
+      - name: Terraform Apply
         run: cd IaC && terraform apply -auto-approve
