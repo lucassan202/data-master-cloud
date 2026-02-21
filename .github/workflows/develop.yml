@@ -1,9 +1,9 @@
 name: "DEV DEPLOY"
 
-on:
-  push:
-    branches:
-      - develop
+#on:
+#  push:
+#    branches:
+#      - develop
 
 permissions:
   id-token: write
@@ -17,7 +17,4 @@ jobs:
       aws-assume-role-arn: "arn:aws:iam::120945137272:role/github-actions-data-master"
       aws-region: "us-east-2"
       aws-statefile-s3-bucket: "besga"
-      aws-lock-dynamodb-table: "data-master-us-east-2-terraform-lock"                
-      databricks-host: ${{ secrets.DATABRICKS_HOST }}
-      databricks-client-id: ${{ secrets.DATABRICKS_CLIENT_ID }}
-      databricks-client-secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}  
+      aws-lock-dynamodb-table: "data-master-us-east-2-terraform-lock"

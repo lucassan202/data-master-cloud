@@ -1,32 +1,30 @@
 name: 'Databricks Terraform CI/CD'
 
 on:
-  workflow_call:
-    inputs:
-      environment:
-        type: string
-        required: true
-      aws-assume-role-arn:
-        type: string
-        required: true
-      aws-region:
-        type: string
-        required: true
-      aws-statefile-s3-bucket:
-        type: string
-        required: true
-      aws-lock-dynamodb-table:
-        type: string
-        required: true
-      databricks-host::
-        type: string
-        required: true
-      databricks-client-id:
-        type: string
-        required: true
-      databricks-client-secret:
-        type: string
-        required: true                        
+  # workflow_call:
+    # inputs:
+      # environment:
+        # type: string
+        # required: true
+      # aws-assume-role-arn:
+        # type: string
+        # required: true
+      # aws-region:
+        # type: string
+        # required: true
+      # aws-statefile-s3-bucket:
+        # type: string
+        # required: true
+      # aws-lock-dynamodb-table:
+        # type: string
+        # required: true
+  push:
+    branches:
+      - develop
+
+permissions:
+  id-token: write
+  contents: read        
 jobs:
   terraform:
     runs-on: ubuntu-latest
@@ -35,9 +33,9 @@ jobs:
     #  run:
     #    shell: bash
     env:      
-      DATABRICKS_HOST: ${{ inputs.databricks-host }}
-      DATABRICKS_CLIENT_ID: ${{ inputs.databricks-client-id }}
-      DATABRICKS_CLIENT_SECRET: ${{ inputs.databricks-client-secret }}  
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}  
 
     steps:
       - name: Checkout
