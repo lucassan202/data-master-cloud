@@ -21,7 +21,7 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ inputs.environment }}
     defaults:
       run:
         shell: bash
@@ -51,6 +51,10 @@ jobs:
         uses: databricks/setup-cli@main
 
       - name: Terraform Init
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: |
           cd IaC && terraform init \
             -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
@@ -59,6 +63,10 @@ jobs:
             -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
       
       - name: Terraform Validate
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: terraform validate
 
         # If using a remote backend, ensure credentials are provided via environment variables or configuration
@@ -67,11 +75,19 @@ jobs:
       #  run: cd IaC && terraform destroy -auto-approve
       
       - name: Terraform Plan
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: cd IaC && 
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
           terraform plan -out="${{ inputs.environment }}.plan"
 
       - name: Terraform Apply
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
         run: cd IaC &&
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
           terraform apply "${{ inputs.environment }}.plan"
