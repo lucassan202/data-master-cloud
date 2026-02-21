@@ -21,6 +21,7 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }} 
     defaults:
       run:
         shell: bash
