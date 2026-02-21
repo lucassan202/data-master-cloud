@@ -11,6 +11,10 @@ permissions:
 
 jobs:
   terraform:
+    env:      
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}  
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
@@ -18,7 +22,3 @@ jobs:
       aws-region: "us-east-2"
       aws-statefile-s3-bucket: "besga"
       aws-lock-dynamodb-table: "data-master-us-east-2-terraform-lock"
-    env:      
-      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}  

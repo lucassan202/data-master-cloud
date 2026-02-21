@@ -25,6 +25,11 @@ jobs:
     #defaults:
     #  run:
     #    shell: bash
+    #env:      
+    #  DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+    #  DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+    #  DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}  
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
