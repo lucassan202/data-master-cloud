@@ -1,0 +1,39 @@
+name: 'Databricks Terraform CI/CD'
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          # Optional: specify terraform version
+          terraform_version: 1.8.2
+
+      # Set up Databricks CLI for authentication and other interactions
+      - name: Setup Databricks CLI
+        uses: databricks/setup-databricks-cli@v1
+        # Assumes DATABRICKS_HOST and DATABRICKS_CLIENT_ID are set as GitHub repo variables/secrets
+        with:
+          databricks-host: ${{ secrets.DATABRICKS_HOST }}
+          databricks-client-id: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          # The DATABRICKS_CLIENT_SECRET should be a GitHub secret
+          databricks-client-secret: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+
+      - name: Terraform Init
+        run: terraform init
+        # If using a remote backend, ensure credentials are provided via environment variables or configuration
+
+      - name: Terraform Plan
+        run: cd IaC && terraform plan
+
+      - name: Terraform Apply        
+        run: cd IaC && terraform apply -auto-approve
