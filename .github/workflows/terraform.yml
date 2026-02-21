@@ -13,12 +13,12 @@ jobs:
       DATABRICKS_AUTH_TYPE: github-oidc
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
-      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
     
     permissions:
       contents: 'read'
       id-token: 'write' # Explicitly grant OIDC token write permission      
-      
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
