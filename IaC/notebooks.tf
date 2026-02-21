@@ -14,7 +14,7 @@ variable "notebook_language" {
 resource "databricks_notebook" "bronze_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/bronze.py"
   language = var.notebook_language
-  source   = "./app/src/bronze.py"
+  source   = "../app/src/bronze.py"
 }
 
 output "notebook_url" {
@@ -24,30 +24,30 @@ output "notebook_url" {
 resource "databricks_notebook" "silver_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/silver.py"
   language = var.notebook_language
-  source   = "./app/src/silver.py"
+  source   = "../app/src/silver.py"
 }
 
 resource "databricks_notebook" "problema_gold_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/problema_gold.py"
   language = var.notebook_language
-  source   = "./app/src/problema_gold.py"
+  source   = "../app/src/problema_gold.py"
 }
 
 resource "databricks_notebook" "reclamacao_gold_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/reclamacao_gold.py"
   language = var.notebook_language
-  source   = "./app/src/reclamacao_gold.py"
+  source   = "../app/src/reclamacao_gold.py"
 }
 
 resource "databricks_notebook" "resposta_gold_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/resposta_gold.py"
   language = var.notebook_language
-  source   = "./app/src/resposta_gold.py"
+  source   = "../app/src/resposta_gold.py"
 }
 
 resource "databricks_notebook" "uf_gold_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/uf_gold.py"
   language = var.notebook_language
-  source   = "./app/src/uf_gold.py"
+  source   = "../app/src/uf_gold.py"
 }
 
