@@ -35,10 +35,11 @@ jobs:
         run: cd IaC && terraform init
         # If using a remote backend, ensure credentials are provided via environment variables or configuration
 
-      - name: Terraform Destroy
-        run: cd IaC && terraform destroy -auto-approve
-      #- name: Terraform Plan
-      #  run: cd IaC && terraform plan
-#
-      #- name: Terraform Apply
-      #  run: cd IaC && terraform apply -auto-approve
+      #- name: Terraform Destroy
+      #  run: cd IaC && terraform destroy -auto-approve
+      
+      - name: Terraform Plan
+        run: cd IaC && terraform plan
+
+      - name: Terraform Apply
+        run: cd IaC && terraform apply -auto-approve

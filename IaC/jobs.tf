@@ -14,12 +14,6 @@ variable "environment" {
   })
 }
 
-variable "task_environment_key" {
-  description = "Environment key padrão para as tasks"
-  type        = string
-  default     = "Default"
-}
-
 variable "email_notifications" {
   description = "Configuração padrão de notificações por email"
   type = object({
@@ -40,9 +34,7 @@ resource "databricks_job" "bronze_job" {
   environment = var.environment
 
   task {
-    task_key = "bronze_task"
-
-    environment_key = var.task_environment_key
+    task_key = "bronze_task"    
 
     notebook_task {
       notebook_path = databricks_notebook.bronze_notebook.path
@@ -69,9 +61,7 @@ resource "databricks_job" "silver_job" {
   environment = var.environment
 
   task {
-    task_key = "silver_task"
-
-    environment_key = var.task_environment_key
+    task_key = "silver_task"    
 
     notebook_task {
       notebook_path = databricks_notebook.silver_notebook.path
@@ -94,9 +84,7 @@ resource "databricks_job" "problema_gold_job" {
   environment = var.environment
 
   task {
-    task_key = "problema_gold_task"
-
-    environment_key = var.task_environment_key
+    task_key = "problema_gold_task"   
 
     notebook_task {
       notebook_path = databricks_notebook.problema_gold_notebook.path
@@ -119,9 +107,7 @@ resource "databricks_job" "reclamacao_gold_job" {
   environment = var.environment
 
   task {
-    task_key = "reclamacao_gold_task"
-
-    environment_key = var.task_environment_key
+    task_key = "reclamacao_gold_task"    
 
     notebook_task {
       notebook_path = databricks_notebook.reclamacao_gold_notebook.path
@@ -144,9 +130,7 @@ resource "databricks_job" "resposta_gold_job" {
   environment = var.environment
 
   task {
-    task_key = "resposta_gold_task"
-
-    environment_key = var.task_environment_key
+    task_key = "resposta_gold_task"    
 
     notebook_task {
       notebook_path = databricks_notebook.resposta_gold_notebook.path
@@ -169,9 +153,7 @@ resource "databricks_job" "uf_gold_job" {
   environment = var.environment
 
   task {
-    task_key = "uf_gold_task"
-
-    environment_key = var.task_environment_key
+    task_key = "uf_gold_task"    
 
     notebook_task {
       notebook_path = databricks_notebook.uf_gold_notebook.path

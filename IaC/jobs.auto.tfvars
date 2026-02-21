@@ -6,6 +6,4 @@ environment = {
   }
 }
 
-task_environment_key = "Default"
-
 emails = ["lucas_san20@hotmail.com"]
