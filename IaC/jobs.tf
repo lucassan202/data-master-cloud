@@ -14,14 +14,6 @@ variable "environment" {
   })
 }
 
-variable "email_notifications" {
-  description = "Configuração padrão de notificações por email"
-  type = object({
-    on_success = list(string)
-    on_failure = list(string)
-  })
-}
-
 variable "emails" {
   description = "Data de referência para carga no formato string."
   type        = list(string)  
