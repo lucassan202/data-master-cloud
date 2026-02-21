@@ -8,7 +8,4 @@ environment = {
 
 task_environment_key = "Default"
 
-email_notifications = {
-  on_success = ["lucas_san20@hotmail.com"]
-  on_failure = ["lucas_san20@hotmail.com"]
-}
+emails = ["lucas_san20@hotmail.com"]
