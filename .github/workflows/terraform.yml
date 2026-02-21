@@ -3,7 +3,7 @@ name: 'Databricks Terraform CI/CD'
 on:
   push:
     branches:
-      - main
+      - develop
 
 jobs:
   terraform:
