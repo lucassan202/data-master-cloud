@@ -11,7 +11,7 @@ jobs:
     environment: dev
     env:
       DATABRICKS_AUTH_TYPE: github-oidc
-      DATABRICKS_HOST: "teste" #${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}      
     steps:
       - name: Checkout
