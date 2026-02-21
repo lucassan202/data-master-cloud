@@ -1,9 +1,9 @@
 name: "DEV DEPLOY"
 
-#on:
-#  push:
-#    branches:
-#      - develop
+on:
+  push:
+    branches:
+      - develop12
 
 permissions:
   id-token: write
