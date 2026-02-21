@@ -31,8 +31,8 @@ resource "databricks_job" "bronze_job" {
   }
   
   email_notifications {
-    on_success = [ data.databricks_current_user.me.user_name ]
-    on_failure = [ data.databricks_current_user.me.user_name ]
+    on_success = [ "lucas_san20@hotmail.com" ]
+    on_failure = [ "lucas_san20@hotmail.com" ]
   }
 }
 
@@ -67,8 +67,8 @@ resource "databricks_job" "silver_job" {
   }
   
   email_notifications {
-    on_success = [ data.databricks_current_user.me.user_name ]
-    on_failure = [ data.databricks_current_user.me.user_name ]
+    on_success = [ "lucas_san20@hotmail.com" ]
+    on_failure = [ "lucas_san20@hotmail.com" ]
   }
 }
 
@@ -99,8 +99,8 @@ resource "databricks_job" "problema_gold_job" {
   }
   
   email_notifications {
-    on_success = [ data.databricks_current_user.me.user_name ]
-    on_failure = [ data.databricks_current_user.me.user_name ]
+    on_success = [ "lucas_san20@hotmail.com" ]
+    on_failure = [ "lucas_san20@hotmail.com" ]
   }
 }
 
@@ -131,8 +131,8 @@ resource "databricks_job" "reclamacao_gold_job" {
   }
   
   email_notifications {
-    on_success = [ data.databricks_current_user.me.user_name ]
-    on_failure = [ data.databricks_current_user.me.user_name ]
+    on_success = [ "lucas_san20@hotmail.com" ]
+    on_failure = [ "lucas_san20@hotmail.com" ]
   }
 }
 
@@ -163,8 +163,8 @@ resource "databricks_job" "resposta_gold_job" {
   }
   
   email_notifications {
-    on_success = [ data.databricks_current_user.me.user_name ]
-    on_failure = [ data.databricks_current_user.me.user_name ]
+    on_success = [ "lucas_san20@hotmail.com" ]
+    on_failure = [ "lucas_san20@hotmail.com" ]
   }
 }
 
@@ -195,7 +195,7 @@ resource "databricks_job" "uf_gold_job" {
   }
   
   email_notifications {
-    on_success = [ data.databricks_current_user.me.user_name ]
-    on_failure = [ data.databricks_current_user.me.user_name ]
+    on_success = [ "lucas_san20@hotmail.com" ]
+    on_failure = [ "lucas_san20@hotmail.com" ]
   }
 }
