@@ -1,0 +1,5 @@
+DATABRICKS_API_TOKEN=your_databricks_token_here
+OPENROUTER_API_KEY=your_openrouter_key_here
+AWS_ACCESS_KEY_ID=your_aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key_here
+GITHUB_TOKEN=your_github_token_here
