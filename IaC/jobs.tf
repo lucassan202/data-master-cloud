@@ -1,21 +1,20 @@
 variable "datrefcarga" {
   description = "Data de referência para carga no formato string."
-  type        = string
-  default     = "2026-01"
+  type        = string  
 }
 
-variable "environment" {
-  description = "Configuração padrão do ambiente"
-  type = object({
-    environment_key = string
-    spec = object({
-      environment_version = string
-    })
-  })
+variable "environment_key" {
+  description = "Chave do ambiente"
+  type        = string
+}
+
+variable "environment_version" {
+  description = "Versão do ambiente"
+  type        = string 
 }
 
 variable "emails" {
-  description = "Data de referência para carga no formato string."
+  description = "Lista de e-mails para notificação de sucesso ou falha"
   type        = list(string)  
 }
 
@@ -23,7 +22,13 @@ resource "databricks_job" "bronze_job" {
 
   name = "Bronze Job"
 
-  environment = var.environment
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
 
   task {
     task_key = "bronze_task"    
@@ -50,7 +55,13 @@ resource "databricks_job" "silver_job" {
 
   name = "Silver Job"
 
-  environment = var.environment
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
 
   task {
     task_key = "silver_task"    
@@ -73,7 +84,13 @@ resource "databricks_job" "problema_gold_job" {
 
   name = "Problema Gold Job"
 
-  environment = var.environment
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
 
   task {
     task_key = "problema_gold_task"   
@@ -96,7 +113,13 @@ resource "databricks_job" "reclamacao_gold_job" {
 
   name = "Reclamacao Gold Job"
 
-  environment = var.environment
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
 
   task {
     task_key = "reclamacao_gold_task"    
@@ -119,7 +142,13 @@ resource "databricks_job" "resposta_gold_job" {
 
   name = "Resposta Gold Job"
 
-  environment = var.environment
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
 
   task {
     task_key = "resposta_gold_task"    
@@ -142,7 +171,13 @@ resource "databricks_job" "uf_gold_job" {
 
   name = "UF Gold Job"
 
-  environment = var.environment
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
 
   task {
     task_key = "uf_gold_task"    

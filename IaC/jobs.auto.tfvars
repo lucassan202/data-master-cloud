@@ -1,9 +1,5 @@
 # Configurações padrão dos jobs
-environment = {
-  environment_key = "Default"
-  spec = {
-    environment_version = "4"
-  }
-}
-
 emails = ["lucas_san20@hotmail.com"]
+environment_key = "Default"
+environment_version = "4"
+datrefcarga = "2026-01"
