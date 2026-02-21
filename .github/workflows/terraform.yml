@@ -51,11 +51,12 @@ jobs:
         uses: databricks/setup-cli@main
 
       - name: Terraform Init
-        run: cd IaC && terraform init #\
-            #-backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
-            #-backend-config="key=${{ github.event.repository.name }}" \
-            #-backend-config="region=${{ inputs.aws-region }}" \
-            #-backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
+        run: |
+          cd IaC && terraform init \
+            -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
+            -backend-config="key=${{ github.event.repository.name }}" \
+            -backend-config="region=${{ inputs.aws-region }}" \
+            -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
       
       - name: Terraform Validate
         run: terraform validate
@@ -66,11 +67,11 @@ jobs:
       #  run: cd IaC && terraform destroy -auto-approve
       
       - name: Terraform Plan
-        run: cd IaC && 
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-          terraform plan -out="${{ inputs.environment }}.plan"
+        run: cd IaC && terraform plan -out="${{ inputs.environment }}.plan"
+          #terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          #terraform plan -out="${{ inputs.environment }}.plan"
 
       - name: Terraform Apply
-        run: cd IaC &&
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-          terraform apply "${{ inputs.environment }}.plan"
+        run: cd IaC && terraform apply "${{ inputs.environment }}.plan"
+          #terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          #terraform apply "${{ inputs.environment }}.plan"
