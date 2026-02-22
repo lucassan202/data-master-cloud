@@ -76,9 +76,9 @@ jobs:
       - name: Terraform Destroy
         if: steps.read-destroy-config.outputs.destroy == 'true'
         id: terraform-destroy
-        run: cd infra &&
+        run: cd IaC &&
           terraform workspace dev || terraform workspace new dev &&
-          terraform destroy -var-file="./IaC/jobs.auto.tfvars" -var-file="./IaC/notebook.auto.tfvars" -auto-approve
+          terraform destroy -auto-approve
       
       - name: Terraform Plan
         if: steps.read-destroy-config.outputs.destroy != 'true'
