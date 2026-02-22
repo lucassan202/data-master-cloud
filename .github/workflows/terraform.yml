@@ -29,7 +29,7 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
-    environment: dev # ${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
     env:      
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID  }}
