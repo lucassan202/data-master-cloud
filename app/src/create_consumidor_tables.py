@@ -1,20 +1,24 @@
-# Databricks notebook source
 # pylint: disable=no-member
 """
 Script para criação das tabelas Consumer (Bronze, Silver, Gold)
 Executa via spark.sql os DDLs dos scripts SQL convertidos
 """
 
-from pyspark.sql import SparkSession
+import logging
 
-# Inicializa o Spark Session
-spark = SparkSession.builder.getOrCreate()
+# ---------------------------------------------------------------------------
+# Configuração de logging
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+)
+logger = logging.getLogger("CreateConsumerTables")
 
 # Obter parâmetro de ambiente
+dbutils.widgets.text("env", "")  # noqa: F821
 env = dbutils.widgets.get("env")
 
-# Configuração de logging
-logger = spark.sparkContext._jvm.org.apache.log4j.LogManager.getLogger("CreateConsumerTables")
 logger.info(f"Iniciando criação das tabelas - Ambiente: {env}")
 
 # Função para determinar o location basedo no ambiente
