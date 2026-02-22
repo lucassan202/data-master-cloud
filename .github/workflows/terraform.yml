@@ -57,7 +57,7 @@ jobs:
       - name: Read destroy configuration
         id: read-destroy-config
         run: |
-          DESTROY="$(jq -r '.dev' ./infra/destroy_config.json)"
+          DESTROY="$(jq -r '.dev' ./IaC/destroy_config.json)"
           echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT          
 
       - name: Terraform Init
