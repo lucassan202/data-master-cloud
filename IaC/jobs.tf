@@ -4,7 +4,7 @@ variable "datrefcarga" {
 }
 
 variable "environment" {
-  description = "Tipo de Ambiente pro ou dev"
+  description = "Tipo de Ambiente (dev | pro)"
   type        = string
 }
 
@@ -21,6 +21,40 @@ variable "environment_version" {
 variable "emails" {
   description = "Lista de e-mails para notificação de sucesso ou falha"
   type        = list(string)  
+}
+
+# Job para criação de databases e tabelas (deve ser executado antes dos jobs de carga)
+resource "databricks_job" "create_databases_job" {
+
+  name = "Create Databases and Tables Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "create_tables_db_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.create_consumidor_tables_notebook.path
+      base_parameters = {
+        "env" = var.environment
+      }      
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+output "create_databases_job_url" {
+  value = databricks_job.create_databases_job.url
 }
 
 resource "databricks_job" "bronze_job" {
@@ -190,6 +224,35 @@ resource "databricks_job" "uf_gold_job" {
 
     notebook_task {
       notebook_path = databricks_notebook.uf_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+resource "databricks_job" "avaliacao_gold_job" {
+
+  name = "Avaliacao Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "avaliacao_gold_task"    
+
+    notebook_task {
+      notebook_path = databricks_notebook.avaliacao_gold_notebook.path
       base_parameters = {
         "datRefCarga" = var.datrefcarga
       }

@@ -51,3 +51,15 @@ resource "databricks_notebook" "uf_gold_notebook" {
   source   = "../app/src/uf_gold.py"
 }
 
+resource "databricks_notebook" "avaliacao_gold_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/avaliacao_gold.py"
+  language = var.notebook_language
+  source   = "../app/src/avaliacao_gold.py"
+}
+
+# Notebooks SQL para criação de databases e tabelas
+resource "databricks_notebook" "create_consumidor_tables_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/create_consumidor_tables.py"
+  language = var.notebook_language
+  source   = "../app/src/create_consumidor_tables.py"
+}
