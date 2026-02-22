@@ -64,7 +64,7 @@ class Bronze:
                 spark.read.schema(schema)
                 .option("header", True)
                 .option("sep", ";")
-                .csv(f"s3://{env}-us-east-2-data-master/tmp/basecompleta{datRefCarga}*.csv")
+                .csv(pathCsv)
             )
             log.info("Leitura do CSV concluída com sucesso")
 
