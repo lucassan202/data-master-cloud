@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   terraform:
+    environment: dev 
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev

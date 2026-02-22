@@ -28,11 +28,7 @@ permissions:
 
 jobs:
   terraform:
-    runs-on: ubuntu-latest
-    environment: dev 
-    #defaults:
-    #  run:
-    #    shell: bash
+    runs-on: ubuntu-latest    
     env:      
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
