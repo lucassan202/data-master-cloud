@@ -1,6 +1,6 @@
 name: 'Databricks Terraform CI/CD'
 
-#on:
+on:
 #  workflow_call:
 #    inputs:
 #      environment:
@@ -18,9 +18,9 @@ name: 'Databricks Terraform CI/CD'
 #      aws-lock-dynamodb-table:
 #        type: string
 #        required: true
-# push:
-  # branches:
-    # - develop
+  push:
+    branches:
+      - develop
 
 permissions:
   id-token: write
