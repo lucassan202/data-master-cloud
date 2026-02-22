@@ -3,7 +3,7 @@ name: "DEV DEPLOY"
 on:
   push:
     branches:
-      - develop12
+      - develop
 
 permissions:
   id-token: write
@@ -18,3 +18,7 @@ jobs:
       aws-region: "us-east-2"
       aws-statefile-s3-bucket: "besga"
       aws-lock-dynamodb-table: "data-master-us-east-2-terraform-lock"
+    secrets:
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
