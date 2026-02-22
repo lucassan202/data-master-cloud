@@ -53,7 +53,11 @@ class Bronze:
             .add("notaConsumidor", "string")
             .add("analiseRecusa", "string")
         )
-
+        
+        if env == 'dev':
+            pathCsv = "s3://besgam/tmp/basecompleta{datRefCarga}*.csv"
+        else:
+            pathCsv = f"s3://{env}-us-east-2-data-master/tmp/basecompleta{datRefCarga}*.csv"
         try:
             log.info(f"Iniciando leitura do CSV basecompleta — datRefCarga: {datRefCarga}")
             df = (
