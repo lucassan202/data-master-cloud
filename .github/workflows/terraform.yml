@@ -54,6 +54,12 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: us-east-2
 
+      - name: Read destroy configuration
+        id: read-destroy-config
+        run: |
+          DESTROY="$(jq -r '.dev' ./infra/destroy_config.json)"
+          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT          
+
       - name: Terraform Init
         run: |
           cd IaC && terraform init \
@@ -67,15 +73,23 @@ jobs:
 
         # If using a remote backend, ensure credentials are provided via environment variables or configuration
 
-      #- name: Terraform Destroy
-      #  run: cd IaC && terraform destroy -auto-approve
+      - name: Terraform Destroy
+        if: steps.read-destroy-config.outputs.destroy == 'true'
+        id: terraform-destroy
+        run: cd infra &&
+          terraform workspace dev || terraform workspace new dev &&
+          terraform destroy -auto-approve
       
       - name: Terraform Plan
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        id: terraform-plan
         run: cd IaC && 
           terraform workspace select dev || terraform workspace new dev &&
           terraform plan -out="dev.plan"
 
       - name: Terraform Apply
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        id: terraform-apply      
         run: cd IaC &&
           terraform workspace select dev || terraform workspace new dev &&
           terraform apply "dev.plan"
