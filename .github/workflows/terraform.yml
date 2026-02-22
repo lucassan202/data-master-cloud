@@ -72,10 +72,10 @@ jobs:
       
       - name: Terraform Plan
         run: cd IaC && 
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-          terraform plan -out="${{ inputs.environment }}.plan"
+          terraform workspace select dev || terraform workspace new dev &&
+          terraform plan -out="dev.plan"
 
       - name: Terraform Apply
         run: cd IaC &&
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-          terraform apply "${{ inputs.environment }}.plan"
+          terraform workspace select dev || terraform workspace new dev &&
+          terraform apply "dev.plan"
