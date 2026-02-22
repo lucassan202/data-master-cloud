@@ -14,10 +14,6 @@ jobs:
     uses: ./.github/workflows/terraform.yml
     with:
       environment: dev
-      aws-assume-role-arn: "arn:aws:iam::120945137272:role/github-actions-data-master"
-      aws-region: "us-east-2"
-      aws-statefile-s3-bucket: "besga"
-      aws-lock-dynamodb-table: "data-master-us-east-2-terraform-lock"
     secrets:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}

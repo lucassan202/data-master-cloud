@@ -9,15 +9,19 @@ on:
       aws-assume-role-arn:
         type: string
         required: true
+        default: "arn:aws:iam::120945137272:role/github-actions-data-master"
       aws-region:
         type: string
         required: true
+        default: "us-east-2"
       aws-statefile-s3-bucket:
         type: string
         required: true
+        default: "besga"
       aws-lock-dynamodb-table:
         type: string
         required: true
+        default: "data-master-us-east-2-terraform-lock"
     secrets:
       DATABRICKS_HOST:
         required: true
@@ -69,9 +73,7 @@ jobs:
             -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
       
       - name: Terraform Validate
-        run: terraform validate
-
-        # If using a remote backend, ensure credentials are provided via environment variables or configuration
+        run: terraform validate        
 
       - name: Terraform Destroy
         if: steps.read-destroy-config.outputs.destroy == 'true'
