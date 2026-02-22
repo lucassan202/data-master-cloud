@@ -18,7 +18,7 @@ log = logging.getLogger("bronze")
 class Bronze:
 
     @staticmethod
-    def run(log, datRefCarga):        
+    def run(log, datRefCarga, env='dev'):        
 
         schema = (
             StructType()
@@ -60,7 +60,7 @@ class Bronze:
                 spark.read.schema(schema)
                 .option("header", True)
                 .option("sep", ";")
-                .csv(f"s3://besga/tmp/basecompleta{datRefCarga}*.csv")
+                .csv(f"s3://{env}-us-east-2-data-master/tmp/basecompleta{datRefCarga}*.csv")
             )
             log.info("Leitura do CSV concluída com sucesso")
 
@@ -82,9 +82,11 @@ class Bronze:
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     # Parâmetros recebidos via Databricks Widgets
-    dbutils.widgets.text("datRefCarga", "")  # noqa: F821    
+    dbutils.widgets.text("datRefCarga", "")  # noqa: F821
+    dbutils.widgets.text("env", "")  # noqa: F821
 
-    datRefCarga = dbutils.widgets.get("datRefCarga")  # noqa: F821    
+    datRefCarga = dbutils.widgets.get("datRefCarga")  # noqa: F821
+    env = dbutils.widgets.get("env")
 
     if not datRefCarga:
         raise ValueError("O parâmetro 'datRefCarga' é obrigatório e não foi informado.")    
@@ -92,7 +94,7 @@ if __name__ == "__main__":
     log.info(f"Parâmetros recebidos — datRefCarga: {datRefCarga}")
 
     try:
-        Bronze.run(log, datRefCarga)
+        Bronze.run(log, datRefCarga, env)
     except Exception as e:
         log.error(f"Job Bronze encerrado com falha: {e}", exc_info=True)
         raise
