@@ -8,19 +8,15 @@ on:
         required: true
       aws-assume-role-arn:
         type: string
-        required: true
         default: "arn:aws:iam::120945137272:role/github-actions-data-master"
       aws-region:
         type: string
-        required: true
         default: "us-east-2"
       aws-statefile-s3-bucket:
         type: string
-        required: true
         default: "besga"
       aws-lock-dynamodb-table:
         type: string
-        required: true
         default: "data-master-us-east-2-terraform-lock"
     secrets:
       DATABRICKS_HOST:
