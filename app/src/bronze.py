@@ -18,7 +18,7 @@ log = logging.getLogger("bronze")
 class Bronze:
 
     @staticmethod
-    def run(log, datRefCarga, env='dev'):        
+    def run(log, datRefCarga, env):        
 
         schema = (
             StructType()

@@ -3,6 +3,11 @@ variable "datrefcarga" {
   type        = string  
 }
 
+variable "environment" {
+  description = "Tipo de Ambiente pro ou dev"
+  type        = string
+}
+
 variable "environment_key" {
   description = "Chave do ambiente"
   type        = string
@@ -37,6 +42,7 @@ resource "databricks_job" "bronze_job" {
       notebook_path = databricks_notebook.bronze_notebook.path
       base_parameters = {
         "datRefCarga" = var.datrefcarga
+        "env" = var.environment
       }
     }
   }
