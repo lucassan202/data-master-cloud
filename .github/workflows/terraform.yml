@@ -77,7 +77,7 @@ jobs:
         if: steps.read-destroy-config.outputs.destroy == 'true'
         id: terraform-destroy
         run: cd IaC &&
-          terraform workspace dev || terraform workspace new dev &&
+          terraform workspace select dev || terraform workspace new dev &&
           terraform destroy -auto-approve
       
       - name: Terraform Plan
