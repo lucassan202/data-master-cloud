@@ -39,6 +39,14 @@ def create_database(database_name: str) -> bool:
     try:
         spark.sql(f"CREATE DATABASE IF NOT EXISTS {database_name}")
         logger.info(f"Database {database_name} verificada/criada com sucesso")
+        
+        # Grant USE_SCHEMA para o usuário lucas_san20@hotmail.com
+        try:
+            spark.sql(f"GRANT USE_SCHEMA ON SCHEMA {database_name} TO `lucas_san20@hotmail.com`")
+            logger.info(f"Grant USE_SCHEMA aplicado no schema {database_name} para lucas_san20@hotmail.com")
+        except Exception as e:
+            logger.warn(f"Grant USE_SCHEMA não aplicado no schema {database_name}: {str(e)}")
+        
         return True
     except Exception as e:
         logger.error(f"Erro ao criar database {database_name}: {str(e)}")
