@@ -55,7 +55,7 @@ class Bronze:
         )
         
         if env == 'dev':
-            pathCsv = f"s3://besgam/tmp/basecompleta{datRefCarga}*.csv"
+            pathCsv = f"s3://besga/tmp/basecompleta{datRefCarga}*.csv"
         else:
             pathCsv = f"s3://{env}-us-east-2-data-master/tmp/basecompleta{datRefCarga}*.csv"
         try:
