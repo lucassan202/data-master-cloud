@@ -26,10 +26,7 @@ def get_location(path_complementar: str) -> str:
     """
     Retorna o location S3 baseado no ambiente
     """
-    if env == 'dev':
-        return f"s3://besga/{path_complementar}"
-    else:
-        return f"s3://{env}-us-east-2-data-master/{path_complementar}"
+    return f"s3://{env}-us-east-2-data-master/{path_complementar}"
 
 
 def create_database(database_name: str) -> bool:
@@ -106,13 +103,6 @@ def create_bronze_tables() -> bool:
         spark.sql(ddl)
         logger.info(f"Tabela b_consumidor.consumidor criada com sucesso - Location: {location}")
         
-        # Grant (opcional - pode falhar em alguns ambientes)
-        try:
-            spark.sql("GRANT SELECT ON TABLE b_consumidor.consumidor TO `lucas_san20@hotmail.com`")
-            logger.info("Grant aplicado na tabela bronze.consumidor")
-        except Exception as e:
-            logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
-        
         return True
         
     except Exception as e:
@@ -171,14 +161,7 @@ def create_silver_tables() -> bool:
         """
         
         spark.sql(ddl)
-        logger.info(f"Tabela s_consumidor.consumidorservicosfinanceiros criada com sucesso - Location: {location}")
-        
-        # Grant (opcional)
-        try:
-            spark.sql("GRANT SELECT ON TABLE s_consumidor.consumidorservicosfinanceiros TO `lucas_san20@hotmail.com`")
-            logger.info("Grant aplicado na tabela silver.consumidorservicosfinanceiros")
-        except Exception as e:
-            logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
+        logger.info(f"Tabela s_consumidor.consumidorservicosfinanceiros criada com sucesso - Location: {location}")    
         
         return True
         
@@ -228,14 +211,7 @@ def create_gold_tables() -> bool:
                 """
                 
                 spark.sql(ddl)
-                logger.info(f"Tabela g_consumidor.{table_name} criada com sucesso - Location: {location}")
-                
-                # Grant (opcional)
-                try:
-                    spark.sql(f"GRANT SELECT ON TABLE g_consumidor.{table_name} TO `lucas_san20@hotmail.com`")
-                    logger.info(f"Grant aplicado na tabela gold.{table_name}")
-                except Exception as e:
-                    logger.warn(f"Grant não aplicado: {str(e)}")
+                logger.info(f"Tabela g_consumidor.{table_name} criada com sucesso - Location: {location}")            
                     
             except Exception as e:
                 logger.error(f"Erro ao criar tabela g_consumidor.{table_name}: {str(e)}")

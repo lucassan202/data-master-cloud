@@ -57,6 +57,40 @@ output "create_databases_job_url" {
   value = databricks_job.create_databases_job.url
 }
 
+# Job para drop de databases e tabelas (executado de forma independente)
+resource "databricks_job" "drop_databases_job" {
+
+  name = "Drop Databases and Tables Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "drop_tables_db_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.drop_consumidor_tables_notebook.path
+      base_parameters = {
+        "env" = var.environment
+      }      
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+output "drop_databases_job_url" {
+  value = databricks_job.drop_databases_job.url
+}
+
 resource "databricks_job" "bronze_job" {
 
   name = "Bronze Job"

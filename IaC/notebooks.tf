@@ -63,3 +63,10 @@ resource "databricks_notebook" "create_consumidor_tables_notebook" {
   language = var.notebook_language
   source   = "../app/src/create_consumidor_tables.py"
 }
+
+# Notebooks SQL para drop de databases e tabelas
+resource "databricks_notebook" "drop_consumidor_tables_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/drop_consumidor_tables.py"
+  language = var.notebook_language
+  source   = "../app/src/drop_consumidor_tables.py"
+}

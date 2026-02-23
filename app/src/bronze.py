@@ -52,14 +52,11 @@ class Bronze:
             .add("avaliacaoReclamacao", "string")
             .add("notaConsumidor", "string")
             .add("analiseRecusa", "string")
-        )
-        
-        if env == 'dev':
-            pathCsv = f"s3://besga/tmp/basecompleta{datRefCarga}*.csv"
-        else:
-            pathCsv = f"s3://{env}-us-east-2-data-master/tmp/basecompleta{datRefCarga}*.csv"
+        )            
+
         try:
             log.info(f"Iniciando leitura do CSV basecompleta — datRefCarga: {datRefCarga}")
+            pathCsv = f"s3://{env}-us-east-2-data-master/tmp/basecompleta{datRefCarga}*.csv"
             df = (
                 spark.read.schema(schema)
                 .option("header", True)

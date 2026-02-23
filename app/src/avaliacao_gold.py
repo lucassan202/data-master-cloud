@@ -29,7 +29,7 @@ class MediaAvaliacao:
                 consumidor.filter(~col('notaconsumidor').isNull())
                 .groupBy(col('nomefantasia'), col('datRefCarga'))
                 .agg(round(sum(col('notaconsumidor')) / count(col('nomefantasia')), 2).alias('mediaAvaliacao'))
-                .select('nomefantasia', 'mediaAvaliacao', 'datRefCarga')
+                .select('nomefantasia', 'datRefCarga', 'mediaAvaliacao')
             )
 
             spark.sql(f"DELETE FROM g_consumidor.mediaavaliacao WHERE datRefCarga = '{datRefCarga}'")
