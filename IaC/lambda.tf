@@ -52,14 +52,14 @@ resource "aws_lambda_function" "download_csv_lambda" {
 }
 
 # Output URLs da Lambda
-# output "lambda_function_arn" {
-#   value = aws_lambda_function.download_csv_lambda.arn
-# }
+output "lambda_function_arn" {
+  value = aws_lambda_function.download_csv_lambda.arn
+}
 
 output "lambda_function_name" {
   value = aws_lambda_function.download_csv_lambda.function_name
 }
 
-# output "lambda_invoke_arn" {
-#   value = aws_lambda_function.download_csv_lambda.invoke_arn
-# }
+output "lambda_invoke_arn" {
+  value = aws_lambda_function.download_csv_lambda.invoke_arn
+}
