@@ -22,7 +22,7 @@ variable "lambda_memory_size" {
 variable "lambda_role_arn" {
   description = "ARN da IAM Role existente para execução da Lambda"
   type        = string
-  default     = "arn:aws:iam::120945137272:role/lambda_execution_role"
+  default     = "arn:aws:iam::120945137272:role/github-actions-data-master"
 }
 
 # ---------------------------------------------------------------------------
