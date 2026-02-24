@@ -19,11 +19,11 @@ variable "lambda_memory_size" {
   default     = 512
 }
 
-variable "lambda_role_arn" {
-  description = "ARN da IAM Role existente para execução da Lambda"
-  type        = string
-  default     = "arn:aws:iam::120945137272:role/github-actions-data-master"
-}
+# variable "lambda_role_arn" {
+#   description = "ARN da IAM Role existente para execução da Lambda"
+#   type        = string
+#   default     = "arn:aws:iam::120945137272:role/github-actions-data-master"
+# }
 
 # ---------------------------------------------------------------------------
 # Lambda Function
@@ -31,7 +31,7 @@ variable "lambda_role_arn" {
 resource "aws_lambda_function" "download_csv_lambda" {
   filename         = "../app/src/lambda_function.zip"
   function_name    = var.lambda_function_name
-  role            = var.lambda_role_arn
+  #role            = var.lambda_role_arn
   handler         = "lambda_download_csv.lambda_handler"
   source_code_hash = filebase64sha256("../app/src/lambda_function.zip")
 
@@ -52,14 +52,14 @@ resource "aws_lambda_function" "download_csv_lambda" {
 }
 
 # Output URLs da Lambda
-output "lambda_function_arn" {
-  value = aws_lambda_function.download_csv_lambda.arn
-}
+# output "lambda_function_arn" {
+#   value = aws_lambda_function.download_csv_lambda.arn
+# }
 
 output "lambda_function_name" {
   value = aws_lambda_function.download_csv_lambda.function_name
 }
 
-output "lambda_invoke_arn" {
-  value = aws_lambda_function.download_csv_lambda.invoke_arn
-}
+# output "lambda_invoke_arn" {
+#   value = aws_lambda_function.download_csv_lambda.invoke_arn
+# }
