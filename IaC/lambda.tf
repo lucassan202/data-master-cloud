@@ -29,7 +29,7 @@ variable "lambda_role_arn" {
 # Lambda Function
 # ---------------------------------------------------------------------------
 resource "aws_lambda_function" "download_csv_lambda" {
-  filename         = "lambda_function.zip"
+  filename         = "../app/src/lambda_function.zip"
   function_name    = var.lambda_function_name
   role            = var.lambda_role_arn
   handler         = "lambda_download_csv.lambda_handler"
