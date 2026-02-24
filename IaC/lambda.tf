@@ -19,72 +19,21 @@ variable "lambda_memory_size" {
   default     = 512
 }
 
-# ---------------------------------------------------------------------------
-# IAM Role para a Lambda
-# ---------------------------------------------------------------------------
-resource "aws_iam_role" "lambda_execution_role" {
-  name = "lambda_execution_role_${var.environment}"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "lambda.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# Attach AWSLambdaBasicExecutionRole policy
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-# Policy para acesso ao S3
-resource "aws_iam_policy" "lambda_s3_policy" {
-  name = "lambda_s3_policy_${var.environment}"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject",
-          "s3:PutObjectAcl"
-        ]
-        Resource = "arn:aws:s3:::${var.environment}-us-east-2-data-master/*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "s3:ListBucket"
-        ]
-        Resource = "arn:aws:s3:::${var.environment}-us-east-2-data-master"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_s3_attachment" {
-  role       = aws_iam_role.lambda_execution_role.name
-  policy_arn = aws_iam_policy.lambda_s3_policy.arn
+variable "lambda_role_arn" {
+  description = "ARN da IAM Role existente para execução da Lambda"
+  type        = string
+  default     = "arn:aws:iam::120945137272:role/github-actions-data-master"
 }
 
 # ---------------------------------------------------------------------------
 # Lambda Function
 # ---------------------------------------------------------------------------
 resource "aws_lambda_function" "download_csv_lambda" {
-  filename         = "lambda_function.zip"
+  filename         = "app/src/lambda_function.zip"
   function_name    = var.lambda_function_name
-  role            = aws_iam_role.lambda_execution_role.arn
+  role            = var.lambda_role_arn
   handler         = "lambda_download_csv.lambda_handler"
-  source_code_hash = filebase64sha256("../app/src/lambda_function.zip")
+  source_code_hash = filebase64sha256("app/src/lambda_function.zip")
 
   runtime = "python3.11"
   timeout = var.lambda_timeout
@@ -96,16 +45,13 @@ resource "aws_lambda_function" "download_csv_lambda" {
     }
   }
 
-  # Dependências do Python layer (opcional)
-  # layers = [aws_lambda_layer_version.python_dependencies.arn]
-
   tags = {
     Environment = var.environment
     Project     = "data-master-cloud"
   }
 }
 
-# Output URL da Lambda
+# Output URLs da Lambda
 output "lambda_function_arn" {
   value = aws_lambda_function.download_csv_lambda.arn
 }
