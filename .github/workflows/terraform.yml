@@ -65,7 +65,7 @@ jobs:
       - name: Upload Lambda to S3
         run: |
           aws s3 cp lambda_function.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/lambda_function.zip
-          ls
+          chmod 777 lambda_function.zip
 
       - name: Read destroy configuration
         id: read-destroy-config
