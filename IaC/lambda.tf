@@ -41,8 +41,8 @@ resource "aws_lambda_function" "download_csv_lambda" {
   role            = var.lambda_role_arn
   handler         = "lambda_download_csv.lambda_handler"
   s3_bucket        = "${var.environment}-us-east-2-data-master"
-  s3_key           = "tmp/lambda_function.zip"
-  source_code_hash = "tmp/lambda_function.zip"
+  s3_key           = "lambda_function.zip"
+  source_code_hash = filebase64sha256("tmp/lambda_function.zip")
 
   runtime = "python3.11"
   timeout = var.lambda_timeout
