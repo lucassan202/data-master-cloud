@@ -39,6 +39,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build Lambda Package
+        run: make package
+
+      - name: Upload Lambda to S3
+        run: |
+          aws s3 cp lambda_function.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/lambda_function.zip
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
