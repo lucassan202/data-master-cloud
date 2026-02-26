@@ -26,14 +26,6 @@ variable "lambda_role_arn" {
 }
 
 # ---------------------------------------------------------------------------
-# Data source para buscar o objeto S3 (para o source_code_hash)
-# ---------------------------------------------------------------------------
-# data "aws_s3_object" "lambda_zip" {
-#   bucket = "${var.environment}-us-east-2-data-master"
-#   key    = "tmp/lambda_function.zip"
-# }
-
-# ---------------------------------------------------------------------------
 # Lambda Function
 # ---------------------------------------------------------------------------
 resource "aws_lambda_function" "download_csv_lambda" {
@@ -41,8 +33,8 @@ resource "aws_lambda_function" "download_csv_lambda" {
   role            = var.lambda_role_arn
   handler         = "lambda_download_csv.lambda_handler"
   s3_bucket        = "${var.environment}-us-east-2-data-master"
-  s3_key           = "lambda_function.zip"
-  source_code_hash = filebase64sha256("tmp/lambda_function.zip")
+  s3_key           = "tmp/lambda_function.zip"
+  source_code_hash = filebase64sha256("lambda_function.zip")
 
   runtime = "python3.11"
   timeout = var.lambda_timeout
