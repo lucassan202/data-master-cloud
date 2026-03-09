@@ -13,14 +13,9 @@ from bs4 import BeautifulSoup
 import boto3
 from botocore.exceptions import ClientError
 
-# ---------------------------------------------------------------------------
-# Configuração de logging
-# ---------------------------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-)
-logger = logging.getLogger("LambdaDownloadCsv")
+logger = logging.getLogger()
+log_level = os.getenv("LAMBDA_LOG_LEVEL", "INFO")
+logger.setLevel(logging.getLevelName(log_level))
 
 # Cliente S3
 s3_client = boto3.client('s3')
