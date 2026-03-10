@@ -1,16 +1,6 @@
 # Obtém detalhes sobre o usuário
 data "databricks_current_user" "me" {}
 
-variable "notebook_subdirectory" {
-  description = "Nome para diretório onde armazenar o notebook."
-  type        = string
-  default     = "Consumidor"
-}
-variable "notebook_language" {
-  description = "Linguagem de programação do notebook."
-  type        = string
-}
-
 resource "databricks_notebook" "bronze_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/bronze.py"
   language = var.notebook_language

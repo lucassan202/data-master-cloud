@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "aws" {
-
+  region = var.awslogs_region
 }
 
 provider "databricks" {

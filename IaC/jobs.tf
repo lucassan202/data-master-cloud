@@ -1,28 +1,3 @@
-variable "datrefcarga" {
-  description = "Data de referência para carga no formato string."
-  type        = string  
-}
-
-variable "environment" {
-  description = "Tipo de Ambiente (dev | pro)"
-  type        = string
-}
-
-variable "environment_key" {
-  description = "Chave do ambiente"
-  type        = string
-}
-
-variable "environment_version" {
-  description = "Versão do ambiente"
-  type        = string 
-}
-
-variable "emails" {
-  description = "Lista de e-mails para notificação de sucesso ou falha"
-  type        = list(string)  
-}
-
 # Job para criação de databases e tabelas (deve ser executado antes dos jobs de carga)
 resource "databricks_job" "create_databases_job" {
 
