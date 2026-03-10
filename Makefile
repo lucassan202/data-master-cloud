@@ -1,36 +1,62 @@
 # Makefile
 
-# Specify the Python version
 PYTHON_VERSION := python3.11
-LAMBDA_VENV := .lambda_venv
-PACKAGE_NAME := lambda_function.zip
-# Add other files separated by spaces if necessary
-LAMBDA_FUNCTION := lambda_download_csv.py
 
-# Default target executed when no arguments are given to make.
-default: clean package
+# --- csv build ---
+CSV_VENV     := .lambda_venv_csv
+CSV_PACKAGE  := lambda_function.zip
+CSV_REQS     := requirements-lambda.txt
+CSV_FUNCTION := lambda_download_csv.py
 
-# Setup a virtual environment
-venv:
+# --- screp build ---
+SCREP_VENV     := .lambda_venv_screp
+SCREP_PACKAGE  := selenium_layer.zip
+SCREP_REQS     := requirements-lambda-screp.txt
+SCREP_FUNCTION := screp_reclamacoes.py
+
+# Internal variables (set via recursive make)
+LAMBDA_VENV     ?= .lambda_venv
+PACKAGE_NAME    ?= lambda_function.zip
+REQUIREMENTS    ?= requirements-lambda.txt
+LAMBDA_FUNCTION ?= lambda_download_csv.py
+
+default: build-csv
+
+build-csv:
+	$(MAKE) _package \
+		LAMBDA_VENV=$(CSV_VENV) \
+		PACKAGE_NAME=$(CSV_PACKAGE) \
+		REQUIREMENTS=$(CSV_REQS) \
+		LAMBDA_FUNCTION=$(CSV_FUNCTION)
+
+build-screp:
+	$(MAKE) _package \
+		LAMBDA_VENV=$(SCREP_VENV) \
+		PACKAGE_NAME=$(SCREP_PACKAGE) \
+		REQUIREMENTS=$(SCREP_REQS) \
+		LAMBDA_FUNCTION=$(SCREP_FUNCTION)
+
+_venv:
 	$(PYTHON_VERSION) -m venv $(LAMBDA_VENV) --without-pip
 	curl -sS https://bootstrap.pypa.io/get-pip.py | $(LAMBDA_VENV)/bin/python3
 	$(LAMBDA_VENV)/bin/pip install -U pip
 
-# Install dependencies into the virtual environment
-dependencies: venv
-	$(LAMBDA_VENV)/bin/pip install -r requirements-lambda.txt
+_dependencies: _venv
+	$(LAMBDA_VENV)/bin/pip install -r $(REQUIREMENTS)
 
-# Package the virtual environment libraries and your lambda function into a zip
-package: dependencies
-	# Adding python packages (find the actual python version in venv)
+_package: _dependencies
 	@PYTHON_DIR=$$(ls $(LAMBDA_VENV)/lib/ | head -n 1); \
 	cd $(LAMBDA_VENV)/lib/$$PYTHON_DIR/site-packages; zip -r9 $(CURDIR)/$(PACKAGE_NAME) .
-	# Adding your lambda function and any additional files
 	zip -gj $(PACKAGE_NAME) ./app/src/lambda/$(LAMBDA_FUNCTION)
 
-# Clean up the environment
-clean:
-	rm -rf $(LAMBDA_VENV)
-	rm -f $(PACKAGE_NAME)
+clean-csv:
+	rm -rf $(CSV_VENV)
+	rm -f $(CSV_PACKAGE)
 
-.PHONY: default venv dependencies package
+clean-screp:
+	rm -rf $(SCREP_VENV)
+	rm -f $(SCREP_PACKAGE)
+
+clean: clean-csv clean-screp
+
+.PHONY: default build-csv build-screp _venv _dependencies _package clean clean-csv clean-screp
