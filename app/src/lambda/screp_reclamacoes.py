@@ -100,12 +100,12 @@ def save_csv_to_s3(s3_client, bucket: str, records: list) -> str:
     :param records: lista de dicts com os campos definidos em CSV_FIELDS
     :return: chave S3 do arquivo gerado
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d")
     key = f"{S3_PREFIX}/reclamacoes_{timestamp}.csv"
 
     # Monta o CSV inteiramente em memória para evitar I/O em disco
     buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDS, extrasaction="ignore")
+    writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDS, extrasaction="ignore", delimiter=";")
     writer.writeheader()
     writer.writerows(records)
 

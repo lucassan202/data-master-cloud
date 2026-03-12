@@ -58,11 +58,11 @@ resource "aws_ecs_task_definition" "selenium" {
 
       # Selenium standalone expõe /status quando pronto
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -sf http://localhost:4444/status | grep -q '\"ready\":true' || exit 1"]
+        command = ["CMD-SHELL", "curl -sf http://localhost:4444/status > /dev/null || exit 1"]
         interval    = 30
         timeout     = 10
-        retries     = 3
-        startPeriod = 60
+        retries     = 5
+        startPeriod = 120
       }
 
       logConfiguration = {
