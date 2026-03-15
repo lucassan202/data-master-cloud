@@ -1,0 +1,597 @@
+{
+  "datasets": [
+    {
+      "name": "ds_reclamacao",
+      "displayName": "Reclamações Top 10",
+      "queryLines": [
+        "SELECT \n",
+        "  case when trim(nomefantasia) in ('Banco do Brasil' , 'Banco do Nordeste')\n",
+        "  then nomefantasia\n",
+        "  else trim(replace(nomefantasia, 'Banco', '')) \n",
+        "  end AS Banco,  \n",
+        "  qtdreclamcoes AS Qtd_Reclamacoes,\n",
+        "  datrefcarga AS Ano_Mes\n",
+        "FROM g_consumidor.reclamacaotopten\n"
+      ]
+    },
+    {
+      "name": "ds_mediaresposta",
+      "displayName": "Média Tempo Resposta",
+      "queryLines": [
+        "SELECT \n",
+        "  case when trim(nomefantasia) in ('Banco do Brasil' , 'Banco do Nordeste')\n",
+        "  then nomefantasia\n",
+        "  else trim(replace(nomefantasia, 'Banco', '')) \n",
+        "  end AS Banco,  \n",
+        "  mediaRespostaDias AS Media_Resposta_Dias,\n",
+        "  datrefcarga AS Ano_Mes\n",
+        "FROM g_consumidor.mediaresposta\n"
+      ]
+    },
+    {
+      "name": "ds_mediaavaliacao",
+      "displayName": "Média Avaliação",
+      "queryLines": [
+        "SELECT \n",
+        "  case when trim(nomefantasia) in ('Banco do Brasil' , 'Banco do Nordeste')\n",
+        "  then nomefantasia\n",
+        "  else trim(replace(nomefantasia, 'Banco', '')) \n",
+        "  end AS Banco,  \n",
+        "  mediaAvaliacao AS Media_Avaliacao,\n",
+        "  datrefcarga AS Ano_Mes\n",
+        "FROM g_consumidor.mediaavaliacao\n"
+      ]
+    },
+    {
+      "name": "ds_reclamacaouf",
+      "displayName": "Reclamações por UF",
+      "queryLines": [
+        "SELECT \n",
+        "  case when trim(nomefantasia) in ('Banco do Brasil' , 'Banco do Nordeste')\n",
+        "  then nomefantasia\n",
+        "  else trim(replace(nomefantasia, 'Banco', '')) \n",
+        "  end AS Banco,  \n",
+        "  trim(replace(uf, 'Brasil - ', '')) AS UF,\n",
+        "  qtdReclamcoesUf AS Qtd_Reclamacoes_UF,\n",
+        "  datrefcarga AS Ano_Mes\n",
+        "FROM g_consumidor.reclamacaouf\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "page_canvas",
+      "displayName": "Painel Consumidor - Reclamações",
+      "layout": [
+        {
+          "widget": {
+            "name": "kpi_total_reclamacoes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_reclamacao",
+                  "fields": [
+                    {
+                      "name": "sum(Qtd_Reclamacoes)",
+                      "expression": "SUM(`Qtd_Reclamacoes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Reclamações"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(Qtd_Reclamacoes)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_media_resposta",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_mediaresposta",
+                  "fields": [
+                    {
+                      "name": "avg(Media_Resposta_Dias)",
+                      "expression": "AVG(`Media_Resposta_Dias`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Média Tempo Resposta (dias)"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(Media_Resposta_Dias)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_media_avaliacao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_mediaavaliacao",
+                  "fields": [
+                    {
+                      "name": "avg(Media_Avaliacao)",
+                      "expression": "AVG(`Media_Avaliacao`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Média Avaliação"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(Media_Avaliacao)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_reclamacoes_instituicao",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_reclamacao",
+                  "fields": [
+                    {
+                      "name": "sum(Qtd_Reclamacoes)",
+                      "expression": "SUM(`Qtd_Reclamacoes`)"
+                    },
+                    {
+                      "name": "Banco",
+                      "expression": "`Banco`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Reclamações por Instituição"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(Qtd_Reclamacoes)",
+                  "axis": {
+                    "title": "Quantidade Reclamações"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "Banco",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_reclamacoes_uf",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_reclamacaouf",
+                  "fields": [
+                    {
+                      "name": "sum(Qtd_Reclamacoes_UF)",
+                      "expression": "SUM(`Qtd_Reclamacoes_UF`)"
+                    },
+                    {
+                      "name": "UF",
+                      "expression": "`UF`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Quantidade Reclamações por UF"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(Qtd_Reclamacoes_UF)",
+                  "axis": {
+                    "title": "Quantidade Reclamações"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "UF",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "line_reclamacoes_mes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_reclamacao",
+                  "fields": [
+                    {
+                      "name": "Ano_Mes",
+                      "expression": "`Ano_Mes`"
+                    },
+                    {
+                      "name": "sum(Qtd_Reclamacoes)",
+                      "expression": "SUM(`Qtd_Reclamacoes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Quantidade de reclamações por mês"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Ano_Mes",
+                  "axis": {
+                    "title": "Ano Mês"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(Qtd_Reclamacoes)",
+                  "axis": {
+                    "title": "Quantidade Reclamações"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 12,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "page_global_filters",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter_banco",
+            "queries": [
+              {
+                "name": "filter_ds_reclamacao_Banco",
+                "query": {
+                  "datasetName": "ds_reclamacao",
+                  "fields": [
+                    {
+                      "name": "Banco",
+                      "expression": "`Banco`"
+                    },
+                    {
+                      "name": "Banco_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_mediaresposta_Banco",
+                "query": {
+                  "datasetName": "ds_mediaresposta",
+                  "fields": [
+                    {
+                      "name": "Banco",
+                      "expression": "`Banco`"
+                    },
+                    {
+                      "name": "Banco_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_mediaavaliacao_Banco",
+                "query": {
+                  "datasetName": "ds_mediaavaliacao",
+                  "fields": [
+                    {
+                      "name": "Banco",
+                      "expression": "`Banco`"
+                    },
+                    {
+                      "name": "Banco_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_reclamacaouf_Banco",
+                "query": {
+                  "datasetName": "ds_reclamacaouf",
+                  "fields": [
+                    {
+                      "name": "Banco",
+                      "expression": "`Banco`"
+                    },
+                    {
+                      "name": "Banco_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Instituição Financeira"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "Banco",
+                    "queryName": "filter_ds_reclamacao_Banco"
+                  },
+                  {
+                    "fieldName": "Banco",
+                    "queryName": "filter_ds_mediaresposta_Banco"
+                  },
+                  {
+                    "fieldName": "Banco",
+                    "queryName": "filter_ds_mediaavaliacao_Banco"
+                  },
+                  {
+                    "fieldName": "Banco",
+                    "queryName": "filter_ds_reclamacaouf_Banco"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter_ano_mes",
+            "queries": [
+              {
+                "name": "filter_ds_reclamacao_Ano_Mes",
+                "query": {
+                  "datasetName": "ds_reclamacao",
+                  "fields": [
+                    {
+                      "name": "Ano_Mes",
+                      "expression": "`Ano_Mes`"
+                    },
+                    {
+                      "name": "Ano_Mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_mediaresposta_Ano_Mes",
+                "query": {
+                  "datasetName": "ds_mediaresposta",
+                  "fields": [
+                    {
+                      "name": "Ano_Mes",
+                      "expression": "`Ano_Mes`"
+                    },
+                    {
+                      "name": "Ano_Mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_mediaavaliacao_Ano_Mes",
+                "query": {
+                  "datasetName": "ds_mediaavaliacao",
+                  "fields": [
+                    {
+                      "name": "Ano_Mes",
+                      "expression": "`Ano_Mes`"
+                    },
+                    {
+                      "name": "Ano_Mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_reclamacaouf_Ano_Mes",
+                "query": {
+                  "datasetName": "ds_reclamacaouf",
+                  "fields": [
+                    {
+                      "name": "Ano_Mes",
+                      "expression": "`Ano_Mes`"
+                    },
+                    {
+                      "name": "Ano_Mes_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Data (Ano-Mês)"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "Ano_Mes",
+                    "queryName": "filter_ds_reclamacao_Ano_Mes"
+                  },
+                  {
+                    "fieldName": "Ano_Mes",
+                    "queryName": "filter_ds_mediaresposta_Ano_Mes"
+                  },
+                  {
+                    "fieldName": "Ano_Mes",
+                    "queryName": "filter_ds_mediaavaliacao_Ano_Mes"
+                  },
+                  {
+                    "fieldName": "Ano_Mes",
+                    "queryName": "filter_ds_reclamacaouf_Ano_Mes"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}

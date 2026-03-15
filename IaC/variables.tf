@@ -155,6 +155,11 @@ variable "notebook_language" {
   type        = string
 }
 
+variable "warehouse_name" {
+  description = "Nome (ou parte do nome) do SQL Warehouse existente no Databricks."
+  type        = string
+}
+
 # ---------------------------------------------------------------------------
 # Databricks — Jobs
 # ---------------------------------------------------------------------------

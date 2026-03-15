@@ -17,7 +17,7 @@ private_subnet_cidrs    = ["10.0.1.0/24", "10.0.2.0/24"]
 cloudmap_namespace_name = "data-master"
 
 # Lambda
-lambda_timeout          = 600
+lambda_timeout          = 900
 lambda_memory_mb        = 512
 # Gerar antes do apply: ver instruções de packaging abaixo
 lambda_layer_zip_path    = "../selenium_layer.zip"

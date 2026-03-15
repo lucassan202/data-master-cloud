@@ -105,7 +105,7 @@ def save_csv_to_s3(s3_client, bucket: str, records: list) -> str:
 
     # Monta o CSV inteiramente em memória para evitar I/O em disco
     buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDS, extrasaction="ignore", delimiter=";")
+    writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDS, extrasaction="ignore", delimiter="|")
     writer.writeheader()
     writer.writerows(records)
 
@@ -219,16 +219,16 @@ def _extract_records(driver: webdriver.Remote, wait: WebDriverWait) -> list:
 
     # Textos: relato, resposta, nota e comentário do consumidor
     logger.info("Extraindo relatos do consumidor (xpath=//div[3]/p).")
-    relatos = [r.text for r in resultados.find_elements(By.XPATH, "//div[3]/p")]
+    relatos = [r.text.replace("|", ";") for r in resultados.find_elements(By.XPATH, "//div[3]/p")]
 
     logger.info("Extraindo respostas da empresa (xpath=//div[4]/p).")
-    respostas = [r.text for r in resultados.find_elements(By.XPATH, "//div[4]/p")]
+    respostas = [r.text.replace("|", ";") for r in resultados.find_elements(By.XPATH, "//div[4]/p")]
 
     logger.info("Extraindo notas e comentários do consumidor (xpath=//div[5]/p).")
     notas, comentarios = [], []
     for i, item in enumerate(resultados.find_elements(By.XPATH, "//div[5]/p"), start=1):
         # Itens ímpares = nota; pares = comentário
-        (notas if i % 2 != 0 else comentarios).append(item.text)
+        (notas if i % 2 != 0 else comentarios).append(item.text.replace("|", ";"))
 
     # Combina todos os campos em dicionários
     records = [
