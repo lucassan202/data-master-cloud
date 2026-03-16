@@ -40,14 +40,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Build Lambda Package Screp Download CSV
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         run: make build-csv
 
       - name: Build Lambda Package Screp Selenium
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         run: make build-screp      
 
       - name: Setup Terraform
@@ -56,9 +59,11 @@ jobs:
           terraform_version: 1.8.3
 
       - name: Install Databricks CLI
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: databricks/setup-cli@main
 
       - name: Configure AWS credentials
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.aws-assume-role-arn }}
@@ -66,9 +71,10 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
 
       - name: Upload Lambda to S3
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         run: |
           aws s3 cp lambda_function.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/lambda_function.zip
-          aws s3 cp selenium_layer.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/selenium_layer.zip
+          aws s3 cp selenium_layer.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/selenium_layer.zip      
 
       - name: Read destroy configuration
         id: read-destroy-config

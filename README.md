@@ -1,6 +1,8 @@
 # data-master-cloud
 
-Pipeline de dados em nuvem para análise de reclamações de consumidores do [consumidor.gov.br](https://www.consumidor.gov.br). Migração cloud-native da solução on-premise [data-master](https://github.com/besgam/data-master), substituindo o cluster Hadoop/Spark por AWS Lambda, ECS Fargate e Databricks, com infraestrutura gerenciada por Terraform e CI/CD via GitHub Actions.
+Pipeline de dados em nuvem para análise de reclamações de consumidores do [consumidor.gov.br](https://www.consumidor.gov.br). Migração cloud-native da solução on-premise [data-master](https://github.com/lucassan202/data-master), substituindo o cluster Hadoop/Spark por AWS Lambda, ECS Fargate e Databricks, com infraestrutura gerenciada por Terraform e CI/CD via GitHub Actions.
+
+O projeto opera dois pipelines de ingestão: um **mensal** (download de CSV consolidado via Lambda) e um **diário** (web scraping incremental via Selenium + Lambda). Os dados são processados em camadas Medallion (Bronze → Silver → Gold) e visualizados em um **Dashboard Lakeview** nativo do Databricks.
 
 Para documentação completa do projeto, arquitetura técnica e detalhamento das camadas de dados, consulte [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -21,7 +23,7 @@ Para documentação completa do projeto, arquitetura técnica e detalhamento das
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/besgam/data-master-cloud.git
+git clone https://github.com/lucassan202/data-master-cloud
 cd data-master-cloud
 ```
 
@@ -86,7 +88,7 @@ terraform -chdir=IaC apply
 
 ### 6. CI/CD via GitHub Actions
 
-O deploy automatizado é ativado ao abrir um Pull Request:
+O deploy automatizado é ativado por push na branch:
 
 | Branch    | Ambiente |
 |-----------|----------|
@@ -107,11 +109,12 @@ O workflow reusável está em [.github/workflows/terraform.yml](.github/workflow
 ```
 data-master-cloud/
 ├── app/src/
-│   ├── lambda/          # Funções Lambda (downloader e scraper)
-│   ├── airflow/dags/    # DAG do Airflow para orquestração
+│   ├── lambda/          # Funções Lambda (downloader CSV e scraper Selenium)
+│   ├── airflow/dags/    # DAGs do Airflow (ETL mensal e scraper diário)
 │   ├── bronze.py        # Notebook Databricks — camada Bronze
 │   ├── silver.py        # Notebook Databricks — camada Silver
 │   └── *_gold.py        # Notebooks Databricks — camada Gold
+├── dash/                # Dashboard Databricks Lakeview (dash_consumidor.lvdash.json)
 ├── IaC/                 # Infraestrutura como Código (Terraform)
 ├── .github/workflows/   # Pipelines de CI/CD
 ├── Makefile             # Empacotamento das Lambdas
@@ -128,5 +131,7 @@ Consulte [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para:
 - Diagrama de arquitetura
 - Detalhamento das camadas Bronze, Silver e Gold
 - Explicação dos componentes de infraestrutura
+- Databricks Lakeview Dashboard (visualizações, datasets e filtros)
+- Pipelines de ingestão (mensal e diário) e orquestração Airflow
 - Pipeline de CI/CD
 - Melhorias futuras planejadas

@@ -11,45 +11,46 @@ O objetivo da migração foi eliminar a necessidade de infraestrutura física ge
 - **CI/CD integrado** — deploy automatizado via GitHub Actions
 - **Custo sob demanda** — recursos pagos apenas quando utilizados
 
-O pipeline coleta dados mensais de reclamações, processa-os em camadas de qualidade progressiva (Medallion Architecture) e disponibiliza visões analíticas agregadas para consumo por ferramentas de BI.
+O projeto opera dois pipelines complementares de ingestão: um **mensal**, que baixa o CSV consolidado de reclamações do portal `dados.mj.gov.br`, e um **diário**, que faz web scraping incremental das reclamações publicadas em `consumidor.gov.br`. Os dados são processados em camadas de qualidade progressiva (Medallion Architecture) e disponibilizados em um dashboard analítico Databricks Lakeview.
 
 ---
 
 ## Arquitetura de Alto Nível
 
 ```
-                        ┌─────────────────────────────────────────────┐
-                        │               AWS Cloud                      │
-                        │                                             │
-  dados.mj.gov.br ──►  │  Lambda (CSV Downloader)                    │
-                        │        │                                    │
-  consumidor.gov.br ──► │  ECS Fargate (Selenium) ──► Lambda (Scraper)│
-                        │        │                         │          │
-                        │        └──────────┬──────────────┘          │
-                        │                   ▼                         │
-                        │              S3 (Data Lake)                 │
-                        │         ┌─────────────────┐                 │
-                        │         │  Bronze / Raw   │                 │
-                        │         └────────┬────────┘                 │
-                        │                  ▼                          │
-                        │         ┌─────────────────┐                 │
-                        │         │ Silver / Filtered│                 │
-                        │         └────────┬────────┘                 │
-                        │                  ▼                          │
-                        │         ┌─────────────────┐                 │
-                        │         │  Gold / Agregado │                 │
-                        │         └────────┬────────┘                 │
-                        │                  │                          │
-                        └──────────────────┼──────────────────────────┘
+                        ┌──────────────────────────────────────────────────┐
+                        │                   AWS Cloud                      │
+                         │                                                 │
+  dados.mj.gov.br ──►   │  Lambda (CSV Downloader)        [mensal]         │
+                        │        │                                        │
+  consumidor.gov.br ──► │  ECS Fargate (Selenium) ──► Lambda (Scraper)    │
+                        │        │                         │  [diário]    │
+                        │        └──────────┬──────────────┘              │
+                        │                   ▼                             │
+                        │              S3 (Data Lake)                     │
+                        │         ┌─────────────────┐                     │
+                        │         │  Bronze / Raw   │                     │
+                        │         └────────┬────────┘                     │
+                        │                  ▼                              │
+                        │         ┌─────────────────┐                     │
+                        │         │ Silver / Filtered│                     │
+                        │         └────────┬────────┘                     │
+                        │                  ▼                              │
+                        │         ┌─────────────────┐                     │
+                        │         │  Gold / Agregado │                     │
+                        │         └────────┬────────┘                     │
+                        │                  │                              │
+                        └──────────────────┼──────────────────────────────┘
                                            │
                                     ┌──────▼──────┐
                                     │  Databricks  │  (processamento)
-                                    │  Airflow DAG │  (orquestração)
-                                    └─────────────┘
+                                    │  Airflow DAGs│  (orquestração)
+                                    └──────┬──────┘
                                            │
-                                    ┌──────▼──────┐
-                                    │   Power BI  │  (visualização)
-                                    └─────────────┘
+                                  ┌────────▼────────┐
+                                  │    Databricks    │
+                                  │Lakeview Dashboard│  (visualização)
+                                  └─────────────────┘
 ```
 
 ---
@@ -73,7 +74,7 @@ As Lambdas são empacotadas via `Makefile` e armazenadas no S3 antes do deploy p
 
 O scraper Selenium exige um navegador real. Para isso, um container **Selenium Standalone** roda no ECS Fargate:
 
-- Imagem: `selenium/standalone-chrome`
+- Imagem: configurável via variável Terraform (`var.docker_image_name`)
 - Comunicação: a Lambda conecta via DNS interno `selenium.<namespace>` (AWS Cloud Map)
 - Monitoramento: health check no endpoint `/status`
 - Logs: CloudWatch Logs com retenção de 7 dias
@@ -88,7 +89,38 @@ Substitui o cluster Hadoop/Spark on-premise. Responsável por todo o processamen
 
 - **Notebooks** gerenciados por Terraform ([IaC/notebooks.tf](../IaC/notebooks.tf))
 - **Jobs** automatizados com notificação por e-mail ([IaC/jobs.tf](../IaC/jobs.tf))
+- **Dashboard Lakeview** gerenciado por Terraform ([IaC/dashboards.tf](../IaC/dashboards.tf))
 - Autenticação via Service Principal (OAuth M2M)
+
+---
+
+### Databricks Lakeview Dashboard
+
+A visualização dos dados é feita por um **Dashboard Lakeview** nativo do Databricks, implantado automaticamente via Terraform a partir do arquivo [dash/dash_consumidor.lvdash.json](../dash/dash_consumidor.lvdash.json).
+
+O dashboard consome as tabelas Gold e apresenta os seguintes componentes:
+
+**Datasets (queries SQL):**
+
+| Dataset | Tabela Gold | Descrição |
+|---------|-------------|-----------|
+| `ds_reclamacao` | `g_consumidor.reclamacaotopten` | Top 10 reclamações por instituição |
+| `ds_mediaresposta` | `g_consumidor.mediaresposta` | Tempo médio de resposta por instituição |
+| `ds_mediaavaliacao` | `g_consumidor.mediaavaliacao` | Média de avaliação por instituição |
+| `ds_reclamacaouf` | `g_consumidor.reclamacaouf` | Volume de reclamações por UF |
+
+**Visualizações:**
+
+| Tipo | Título | Descrição |
+|------|--------|-----------|
+| KPI (counter) | Total Reclamações | Soma total de reclamações |
+| KPI (counter) | Média Tempo Resposta (dias) | Média geral do tempo de resposta |
+| KPI (counter) | Média Avaliação | Nota média dos consumidores |
+| Gráfico de barras | Total Reclamações por Instituição | Ranking horizontal por volume |
+| Gráfico de barras | Quantidade Reclamações por UF | Distribuição geográfica |
+| Gráfico de linhas | Quantidade de reclamações por mês | Evolução temporal |
+
+**Filtros globais:** Instituição Financeira e Ano-Mês, aplicados a todos os widgets simultaneamente.
 
 ---
 
@@ -119,25 +151,26 @@ O acesso ao S3 pelas Lambdas e pelo ECS é feito via **S3 Gateway Endpoint**, se
 
 ### GitHub Actions — CI/CD
 
-O pipeline de CI/CD é acionado automaticamente por Pull Requests:
+O pipeline de CI/CD é acionado automaticamente por **push** nas branches protegidas:
 
 ```
-PR aberto
+Push para branch
     │
     ├── Build Lambda packages (make all)
     ├── Upload para S3 (aws s3 cp)
     ├── terraform init
     ├── terraform validate
     ├── terraform plan
-    └── terraform apply
+    ├── terraform apply
+    └── Sync DAGs para S3 (apenas produção)
 ```
 
 Workflows:
 
 | Arquivo | Gatilho |
-|---------|---------|
-| [.github/workflows/develop.yml](../.github/workflows/develop.yml) | PR para `develop` → deploy `dev` |
-| [.github/workflows/main.yml](../.github/workflows/main.yml) | PR para `main` → deploy `pro` |
+|---------|--------|
+| [.github/workflows/develop.yml](../.github/workflows/develop.yml) | Push para `develop` → deploy `dev` |
+| [.github/workflows/main.yml](../.github/workflows/main.yml) | Push para `main` → deploy `pro` + sync DAGs para S3 |
 | [.github/workflows/terraform.yml](../.github/workflows/terraform.yml) | Workflow reusável (chamado pelos dois acima) |
 
 ---
@@ -188,9 +221,15 @@ São produzidas **5 tabelas Gold**, cada uma com um foco analítico distinto:
 
 ---
 
-## Orquestração — Airflow DAG
+## Orquestração — Airflow DAGs
 
-O DAG do Airflow ([app/src/airflow/dags/databricks_etl_dag.py](../app/src/airflow/dags/databricks_etl_dag.py)) coordena a execução dos jobs Databricks na seguinte ordem:
+O projeto utiliza **dois DAGs** no Airflow, cada um responsável por um pipeline de ingestão distinto.
+
+### DAG Mensal — ETL Databricks
+
+**Arquivo:** [app/src/airflow/dags/databricks_etl_dag.py](../app/src/airflow/dags/databricks_etl_dag.py)  
+**Schedule:** Dia 15 de cada mês, à meia-noite  
+**Objetivo:** Baixar o CSV consolidado mensal, processar nas camadas Bronze → Silver → Gold.
 
 ```
 create_tables
@@ -210,6 +249,31 @@ create_tables
      ├──► reclamacaouf_gold
      └──► reclamacao_gold
 ```
+
+Os jobs Databricks são executados via `DatabricksRunNowOperator` com o parâmetro `dat_ref_carga` gerado dinamicamente. Em caso de falha, cada task faz até 3 retentativas com intervalo de 1 minuto.
+
+---
+
+### DAG Diário — Web Scraper
+
+**Arquivo:** [app/src/airflow/dags/dag_screp.py](../app/src/airflow/dags/dag_screp.py)  
+**Schedule:** Diariamente às 6h  
+**Objetivo:** Extrair incrementalmente o texto completo das reclamações publicadas em `consumidor.gov.br`.
+
+```
+start_ecs_selenium (desired_count = 1)
+     │
+     ▼
+wait_selenium_ready (health check /status, timeout 10 min)
+     │
+     ▼
+invoke_lambda_scraper
+     │
+     ▼
+stop_ecs_selenium (desired_count = 0)  ← executa sempre (ALL_DONE)
+```
+
+O scraper utiliza um mecanismo de **bastão** (arquivo de controle no S3) que armazena o timestamp da última execução, garantindo que apenas reclamações novas sejam coletadas a cada execução. O container ECS Selenium é ligado sob demanda e desligado após a conclusão, independente do resultado (`TriggerRule.ALL_DONE`), evitando custos desnecessários.
 
 ---
 
@@ -232,5 +296,4 @@ Exemplo: `dev-us-east-2-data-master`
 - Análise de sentimentos no texto das reclamações (NLP)
 - Alertas automáticos para anomalias nos KPIs Gold
 - Novas visões analíticas (sazonalidade, evolução temporal)
-- Dashboards Power BI publicados automaticamente via CI/CD
-- Streaming para ingestão em tempo real (substituindo o batch mensal)
+- Streaming para ingestão em tempo real (complementando o batch mensal)
