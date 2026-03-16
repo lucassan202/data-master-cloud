@@ -8,41 +8,38 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 )
-log = logging.getLogger("gold-media-resposta")
+log = logging.getLogger("gold-media-avaliacao")
 
 
 # ---------------------------------------------------------------------------
 # Classe principal
 # ---------------------------------------------------------------------------
-class MediaResposta:
+class MediaAvaliacao:
 
     @staticmethod
-    def run(log, datRefCarga):        
+    def run(log, datRefCarga):
+
         try:
-            log.info(f"Iniciando job MediaResposta — datRefCarga: {datRefCarga}")
+            log.info(f"Iniciando job MediaAvaliacao — datRefCarga: {datRefCarga}")
 
             consumidor = spark.table('s_consumidor.consumidorservicosfinanceiros').filter(col('datRefCarga') == datRefCarga)
 
-            log.info("Calculando média de dias de resposta por nomefantasia (apenas respondidas)")
+            log.info("Filtrando consumidores com nota e calculando média por nomefantasia")
             consumidor = (
-                consumidor.filter(col("respondida") == True)
-                .groupBy(col("nomefantasia"), col("datRefCarga"))
-                .agg(
-                    round(
-                        sum(col("temporesposta")) / count(col("nomefantasia")), 0
-                    ).alias("mediaRespostaDias")
-                )
-                .select("nomefantasia", "datRefCarga", "mediaRespostaDias")
+                consumidor.filter(~col('notaconsumidor').isNull())
+                .groupBy(col('nomefantasia'), col('datRefCarga'))
+                .agg(round(sum(col('notaconsumidor')) / count(col('nomefantasia')), 2).alias('mediaAvaliacao'))
+                .select('nomefantasia', 'datRefCarga', 'mediaAvaliacao')
             )
 
-            spark.sql(f"DELETE FROM g_consumidor.mediaresposta WHERE datRefCarga = '{datRefCarga}'")
+            spark.sql(f"DELETE FROM g_consumidor.mediaavaliacao WHERE datRefCarga = '{datRefCarga}'")
             log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
 
-            consumidor.write.mode("append").insertInto("g_consumidor.mediaresposta")
-            log.info("MediaResposta — job finalizado com sucesso")
+            consumidor.write.mode("append").insertInto("g_consumidor.mediaavaliacao")
+            log.info("MediaAvaliacao — job finalizado com sucesso")
 
         except Exception as e:
-            log.error(f"Erro durante a execução do job MediaResposta: {e}", exc_info=True)
+            log.error(f"Erro durante a execução do job MediaAvaliacao: {e}", exc_info=True)
             raise
 
 
@@ -55,12 +52,12 @@ if __name__ == "__main__":
     datRefCarga = dbutils.widgets.get("datRefCarga")  # noqa: F821
 
     if not datRefCarga:
-        raise ValueError("O parâmetro 'datRefCarga' é obrigatório e não foi informado.")    
+        raise ValueError("O parâmetro 'datRefCarga' é obrigatório e não foi informado.")
 
     log.info(f"Parâmetros recebidos — datRefCarga: {datRefCarga}")
 
     try:
-        MediaResposta.run(log, datRefCarga)
+        MediaAvaliacao.run(log, datRefCarga)
     except Exception as e:
-        log.error(f"Job MediaResposta encerrado com falha: {e}", exc_info=True)
+        log.error(f"Job MediaAvaliacao encerrado com falha: {e}", exc_info=True)
         raise

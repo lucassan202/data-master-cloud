@@ -1,5 +1,3 @@
-# Projeto 5 - Databricks Cluster Deploy com Terraform Para Processamento Distribuído
-
 terraform {
   required_providers {
     databricks = {
@@ -7,3 +5,12 @@ terraform {
     }
   }
 }
+
+provider "aws" {
+  region = var.awslogs_region
+}
+
+provider "databricks" {
+
+}
+
