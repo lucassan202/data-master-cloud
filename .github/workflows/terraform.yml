@@ -99,13 +99,18 @@ jobs:
         run: cd IaC &&
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
           terraform destroy -auto-approve
+            -var="env=${{ inputs.environment }}"
+            -var="environment=${{ inputs.environment }}"
       
       - name: Terraform Plan
         if: steps.read-destroy-config.outputs.destroy != 'true'
         id: terraform-plan
         run: cd IaC && 
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-          terraform plan -out="${{ inputs.environment }}.plan"
+          terraform plan
+            -var="env=${{ inputs.environment }}"
+            -var="environment=${{ inputs.environment }}"
+            -out="${{ inputs.environment }}.plan"
 
       - name: Terraform Apply
         if: steps.read-destroy-config.outputs.destroy != 'true'
