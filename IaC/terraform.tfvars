@@ -1,5 +1,5 @@
 project_name            = "data-master"
-env                     = "dev"
+#env                     = "dev"
 container_port          = "4444"
 awslogs_region          = "us-east-2"
 docker_image_name       = "selenium/standalone-firefox:4.25.0-20241010"
