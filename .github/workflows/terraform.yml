@@ -107,6 +107,9 @@ jobs:
         id: terraform-plan
         run: cd IaC && 
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          terraform state rm "aws_ecs_cluster.main" &&
+          terraform state rm "aws_ecs_cluster_capacity_providers.main" &&
+          terraform state rm "aws_ecs_service.selenium" &&
           terraform plan
             -var="env=${{ inputs.environment }}"
             -var="environment=${{ inputs.environment }}"
@@ -117,7 +120,4 @@ jobs:
         id: terraform-apply      
         run: cd IaC &&
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-          terraform state rm "aws_ecs_cluster.main" &&
-          terraform state rm "aws_ecs_cluster_capacity_providers.main" &&
-          terraform state rm "aws_ecs_service.selenium" &&
           terraform apply "${{ inputs.environment }}.plan"
