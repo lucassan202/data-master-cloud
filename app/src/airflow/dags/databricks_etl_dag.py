@@ -47,7 +47,7 @@ with DAG(
     # Task Lambda - Download dos arquivos CSV do dados.mj.gov.br para S3
     lambda_download_task = LambdaInvokeFunctionOperator(
         task_id='invoke_lambda_download_csv',
-        function_name='download-csv-consumer',
+        function_name=f'download-csv-consumer-{Variable.get("environment")}',
         payload=json.dumps({"datRefCarga": get_dat_ref_carga(), "ENV": Variable.get('environment')}),
     )
 

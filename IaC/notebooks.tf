@@ -7,6 +7,12 @@ resource "databricks_notebook" "bronze_notebook" {
   source   = "../app/src/bronze.py"
 }
 
+resource "databricks_notebook" "bronze_screp_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/bronze_screp.py"
+  language = var.notebook_language
+  source   = "../app/src/bronze_screp.py"
+}
+
 output "notebook_url" {
  value = databricks_notebook.bronze_notebook.url
 }

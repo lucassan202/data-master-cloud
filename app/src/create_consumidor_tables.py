@@ -50,6 +50,53 @@ def create_database(database_name: str) -> bool:
         return False
 
 
+def create_bronze_screp_tables() -> bool:
+    """
+    Cria tabela Bronze Screp - b_consumidor.consumidor_dia
+    """
+    try:
+        logger.info("Iniciando criação da tabela Bronze Screp")
+
+        # Cria database (reutiliza o mesmo b_consumidor)
+        if not create_database("b_consumidor"):
+            return False
+
+        location = get_location("data/b_consumidor/consumidor_dia")
+
+        ddl = f"""
+        CREATE EXTERNAL TABLE IF NOT EXISTS b_consumidor.consumidor_dia(
+          nomeempresa string,
+          status string,
+          temporesposta string,
+          dataocorrido string,
+          cidade string,
+          uf string,
+          relato string,
+          resposta string,
+          nota string,
+          comentario string,
+          datrefcarga string)
+        LOCATION
+          '{location}'
+        """
+
+        spark.sql(ddl)
+        logger.info(f"Tabela b_consumidor.consumidor_dia criada com sucesso - Location: {location}")
+
+        # Grant (opcional - pode falhar em alguns ambientes)
+        try:
+            spark.sql("GRANT SELECT ON TABLE b_consumidor.consumidor_dia TO `lucas_san20@hotmail.com`")
+            logger.info("Grant aplicado na tabela bronze.consumidor_dia")
+        except Exception as e:
+            logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Erro ao criar tabela Bronze Screp: {str(e)}")
+        return False
+
+
 def create_bronze_tables() -> bool:
     """
     Cria tabelas Bronze - b_consumidor.consumidor
@@ -254,11 +301,16 @@ def main():
     logger.info("=" * 60)
     
     results = {
+        "BronzeScrep": False,
         "Bronze": False,
         "Silver": False,
         "Gold": False
     }
     
+    # Executa criação da tabela Bronze Screp
+    logger.info("--- Fase 0: Criando tabela Bronze Screp ---")
+    results["BronzeScrep"] = create_bronze_screp_tables()
+
     # Executa criação das tabelas Bronze
     logger.info("--- Fase 1: Criando tabelas Bronze ---")
     results["Bronze"] = create_bronze_tables()
@@ -274,6 +326,7 @@ def main():
     # Resumo final
     logger.info("=" * 60)
     logger.info("RESUMO DA EXECUÇÃO:")
+    logger.info(f"  BronzeScrep: {'SUCESSO' if results['BronzeScrep'] else 'FALHA'}")
     logger.info(f"  Bronze: {'SUCESSO' if results['Bronze'] else 'FALHA'}")
     logger.info(f"  Silver: {'SUCESSO' if results['Silver'] else 'FALHA'}")
     logger.info(f"  Gold:   {'SUCESSO' if results['Gold'] else 'FALHA'}")

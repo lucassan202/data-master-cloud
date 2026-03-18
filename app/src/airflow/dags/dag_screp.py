@@ -5,6 +5,7 @@ from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.lambda_function import LambdaInvokeFunctionOperator
+from airflow.providers.databricks.operators.databricks import DatabricksRunNowOperator
 from airflow.sensors.python import PythonSensor
 from airflow.utils.trigger_rule import TriggerRule
 
@@ -87,4 +88,18 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE,
     )
 
-    start_selenium >> wait_selenium >> invoke_lambda >> stop_selenium
+    bronze_screp_task = DatabricksRunNowOperator(
+        task_id="run_bronze_screp_job",
+        job_name="Bronze Screp Job",
+        notebook_params={
+            "datRefCarga": datetime.now().strftime("%Y%m%d"),
+            "env": ENV,
+        },
+        databricks_conn_id="databricks_default",
+    )
+
+    # invoke_lambda é upstream de stop_selenium (cleanup) e de bronze_screp_task.
+    # bronze_screp_task aguarda ambos: garante cleanup antes de iniciar a carga
+    # e falha se o lambda não tiver gerado o arquivo.
+    start_selenium >> wait_selenium >> invoke_lambda >> [stop_selenium, bronze_screp_task]
+    stop_selenium >> bronze_screp_task

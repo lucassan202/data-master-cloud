@@ -66,7 +66,7 @@ def drop_bronze_tables() -> bool:
         logger.info("Iniciando drop das tabelas Bronze")
         
         # Tabelas do database Bronze
-        tables = ["consumidor"]
+        tables = ["consumidor", "consumidor_dia"]
         
         if not drop_tables_in_database("b_consumidor", tables):
             return False
