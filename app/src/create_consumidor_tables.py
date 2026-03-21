@@ -231,6 +231,60 @@ def create_silver_tables() -> bool:
         return False
 
 
+def create_silver_ai_classificacao_relatos_table() -> bool:
+    """
+    Cria tabela Silver AI - s_consumidor.ai_classificacao_relatos
+    """
+    try:
+        logger.info("Iniciando criação da tabela Silver AI Classificação Relatos")
+
+        # s_consumidor já é criado em create_silver_tables, mas garantimos aqui
+        if not create_database("s_consumidor"):
+            return False
+
+        location = get_location("data/s_consumidor/ai_classificacao_relatos")
+
+        ddl = f"""
+        CREATE EXTERNAL TABLE IF NOT EXISTS s_consumidor.ai_classificacao_relatos(
+          nomeempresa string,
+          status string,
+          temporesposta string,
+          dataocorrido string,
+          cidade string,
+          uf string,
+          relato string,
+          resposta string,
+          nota string,
+          comentario string,
+          datrefcarga string,
+          macro_categoria string,
+          categoria string,
+          subcategoria string,
+          canal string,
+          prioridade string,
+          sla_dias string,
+          resposta_sugerida string,
+          resposta_final string)
+        LOCATION
+          '{location}'
+        """
+
+        spark.sql(ddl)
+        logger.info(f"Tabela s_consumidor.ai_classificacao_relatos criada com sucesso - Location: {location}")
+
+        try:
+            spark.sql("GRANT SELECT ON TABLE s_consumidor.ai_classificacao_relatos TO `lucas_san20@hotmail.com`")
+            logger.info("Grant aplicado na tabela s_consumidor.ai_classificacao_relatos")
+        except Exception as e:
+            logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Erro ao criar tabela Silver AI Classificação Relatos: {str(e)}")
+        return False
+
+
 def create_gold_tables() -> bool:
     """
     Cria tabelas Gold - g_consumidor (5 tabelas)
@@ -304,6 +358,7 @@ def main():
         "BronzeScrep": False,
         "Bronze": False,
         "Silver": False,
+        "SilverAiClassificacaoRelatos": False,
         "Gold": False
     }
     
@@ -318,7 +373,11 @@ def main():
     # Executa criação das tabelas Silver
     logger.info("--- Fase 2: Criando tabelas Silver ---")
     results["Silver"] = create_silver_tables()
-    
+
+    # Executa criação da tabela Silver AI Classificação Relatos
+    logger.info("--- Fase 2b: Criando tabela Silver AI Classificação Relatos ---")
+    results["SilverAiClassificacaoRelatos"] = create_silver_ai_classificacao_relatos_table()
+
     # Executa criação das tabelas Gold
     logger.info("--- Fase 3: Criando tabelas Gold ---")
     results["Gold"] = create_gold_tables()
@@ -329,6 +388,7 @@ def main():
     logger.info(f"  BronzeScrep: {'SUCESSO' if results['BronzeScrep'] else 'FALHA'}")
     logger.info(f"  Bronze: {'SUCESSO' if results['Bronze'] else 'FALHA'}")
     logger.info(f"  Silver: {'SUCESSO' if results['Silver'] else 'FALHA'}")
+    logger.info(f"  SilverAiClassificacaoRelatos: {'SUCESSO' if results['SilverAiClassificacaoRelatos'] else 'FALHA'}")
     logger.info(f"  Gold:   {'SUCESSO' if results['Gold'] else 'FALHA'}")
     logger.info("=" * 60)
     

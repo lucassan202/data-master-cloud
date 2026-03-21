@@ -38,7 +38,7 @@ with DAG(
     dag_id='databricks_etl_pipeline',
     default_args=default_args,
     description='DAG para executar jobs Databricks do pipeline ETL (bronze >> silver >> gold)',
-    schedule_interval='0 0 15 * *',  # Executa no dia 15 de cada mês à meia-noite
+    schedule='0 0 15 * *',  # Executa no dia 15 de cada mês à meia-noite
     start_date=datetime(2026, 1, 15),
     catchup=False,
     tags=['databricks', 'etl', 'bronze', 'silver', 'gold'],
