@@ -24,6 +24,19 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
+def get_dat_ref_carga():
+    """
+    Define a data de referência para carga.
+    Se a variável 'dat_ref_carga' estiver vazia, usa a data atual.
+    Formato de saída: YYYY-MM-DD
+    """
+    if Variable.get('dat_ref_carga').strip() == "":
+        dat_ref_carga = datetime.now()
+        dat_ref_carga = dat_ref_carga.strftime("%Y%m%d")
+    else:    
+        dat_ref_carga = Variable.get('dat_ref_carga')
+    
+    return dat_ref_carga
 
 def _update_ecs_service(desired_count: int):
     from airflow.providers.amazon.aws.hooks.base_aws import AwsBaseHook
@@ -92,8 +105,18 @@ with DAG(
         task_id="run_bronze_screp_job",
         job_name="Bronze Screp Job",
         notebook_params={
-            "datRefCarga": datetime.now().strftime("%Y%m%d"),
+            "datRefCarga": get_dat_ref_carga(),
             "env": ENV,
+        },
+        databricks_conn_id="databricks_default",
+    )
+
+    silver_ai_classificacao_relatos_task = DatabricksRunNowOperator(
+        task_id="run_silver_ai_classificacao_relatos_job",
+        job_name="Silver AI Classificacao Relatos Job",
+        notebook_params={
+            "datRefCarga": get_dat_ref_carga(),
+            "llm_model": "databricks-gpt-5-2",
         },
         databricks_conn_id="databricks_default",
     )
@@ -103,3 +126,4 @@ with DAG(
     # e falha se o lambda não tiver gerado o arquivo.
     start_selenium >> wait_selenium >> invoke_lambda >> [stop_selenium, bronze_screp_task]
     stop_selenium >> bronze_screp_task
+    bronze_screp_task >> silver_ai_classificacao_relatos_task

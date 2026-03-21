@@ -17,11 +17,11 @@ def get_dat_ref_carga():
     Se a variável 'dat_ref_carga' estiver vazia, usa a data atual - 30 dias.
     Formato de saída: YYYY-MM
     """
-    if Variable.get('dat_ref_carga') == "":
+    if Variable.get('dat_ref_carga').strip() == "":
         dat_ref_carga = datetime.now() - timedelta(days=30)
         dat_ref_carga = dat_ref_carga.strftime("%Y-%m")
     else:    
-        dat_ref_carga = Variable.get('dat_ref_carga')
+        dat_ref_carga = Variable.get('dat_ref_carga_m')
     
     return dat_ref_carga
 

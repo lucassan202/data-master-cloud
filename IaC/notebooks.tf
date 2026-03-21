@@ -53,6 +53,12 @@ resource "databricks_notebook" "avaliacao_gold_notebook" {
   source   = "../app/src/avaliacao_gold.py"
 }
 
+resource "databricks_notebook" "silver_ai_classificacao_relatos_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/silver_ai_classificacao_relatos.py"
+  language = var.notebook_language
+  source   = "../app/src/silver_ai_classificacao_relatos.py"
+}
+
 # Notebooks SQL para criação de databases e tabelas
 resource "databricks_notebook" "create_consumidor_tables_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/create_consumidor_tables.py"
