@@ -302,6 +302,9 @@ def create_gold_tables() -> bool:
             ("mediaresposta", "data/g_consumidor/mediaresposta"),
             ("reclamacaotopten", "data/g_consumidor/reclamacaotopten"),
             ("reclamacaouf", "data/g_consumidor/reclamacaouf"),
+            ("ai_status", "data/g_consumidor/ai_status"),
+            ("ai_nota", "data/g_consumidor/ai_nota"),
+            ("ai_macro_categoria", "data/g_consumidor/ai_macro_categoria"),
         ]
         
         # Definições das colunas para cada tabela Gold
@@ -311,6 +314,9 @@ def create_gold_tables() -> bool:
             "mediaresposta": "nomefantasia string, datrefcarga string, mediaRespostaDias double",
             "reclamacaotopten": "nomefantasia string, datrefcarga string, qtdreclamcoes bigint",
             "reclamacaouf": "nomefantasia string, uf string, datrefcarga string, qtdReclamcoesUf bigint",
+            "ai_status": "status string, dataocorrido string, datrefcarga string, qtd bigint",
+            "ai_nota": "nota string, dataocorrido string, datrefcarga string, qtd bigint",
+            "ai_macro_categoria": "macro_categoria string, dataocorrido string, datrefcarga string, qtd bigint",
         }
         
         for table_name, path_complementar in tables:

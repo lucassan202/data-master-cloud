@@ -341,3 +341,90 @@ resource "databricks_job" "avaliacao_gold_job" {
     on_failure = var.emails
   }
 }
+
+resource "databricks_job" "status_ai_gold_job" {
+
+  name = "Status AI Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "status_ai_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.status_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+resource "databricks_job" "nota_ai_gold_job" {
+
+  name = "Nota AI Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "nota_ai_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.nota_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+resource "databricks_job" "macro_categoria_ai_gold_job" {
+
+  name = "Macro Categoria AI Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "macro_categoria_ai_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.macro_categoria_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}

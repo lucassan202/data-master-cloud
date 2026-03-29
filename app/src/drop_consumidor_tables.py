@@ -121,7 +121,10 @@ def drop_gold_tables() -> bool:
             "mediaavaliacao",
             "mediaresposta",
             "reclamacaotopten",
-            "reclamacaouf"
+            "reclamacaouf",
+            "ai_status",
+            "ai_nota",
+            "ai_macro_categoria"
         ]
         
         if not drop_tables_in_database("g_consumidor", tables):

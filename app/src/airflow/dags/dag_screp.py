@@ -91,7 +91,7 @@ with DAG(
         invocation_type="RequestResponse",
         region_name=REGION,
         aws_conn_id=AWS_CONN_ID,
-        botocore_config={"read_timeout": 620, "connect_timeout": 30},
+        botocore_config={"read_timeout": 900, "connect_timeout": 30},
     )
 
     stop_selenium = PythonOperator(
@@ -121,9 +121,37 @@ with DAG(
         databricks_conn_id="databricks_default",
     )
 
+    status_ai_gold_task = DatabricksRunNowOperator(
+        task_id="run_status_ai_gold_job",
+        job_name="Status AI Gold Job",
+        notebook_params={
+            "datRefCarga": get_dat_ref_carga(),
+        },
+        databricks_conn_id="databricks_default",
+    )
+
+    nota_ai_gold_task = DatabricksRunNowOperator(
+        task_id="run_nota_ai_gold_job",
+        job_name="Nota AI Gold Job",
+        notebook_params={
+            "datRefCarga": get_dat_ref_carga(),
+        },
+        databricks_conn_id="databricks_default",
+    )
+
+    macro_categoria_ai_gold_task = DatabricksRunNowOperator(
+        task_id="run_macro_categoria_ai_gold_job",
+        job_name="Macro Categoria AI Gold Job",
+        notebook_params={
+            "datRefCarga": get_dat_ref_carga(),
+        },
+        databricks_conn_id="databricks_default",
+    )
+
     # invoke_lambda é upstream de stop_selenium (cleanup) e de bronze_screp_task.
     # bronze_screp_task aguarda ambos: garante cleanup antes de iniciar a carga
     # e falha se o lambda não tiver gerado o arquivo.
     start_selenium >> wait_selenium >> invoke_lambda >> [stop_selenium, bronze_screp_task]
     stop_selenium >> bronze_screp_task
     bronze_screp_task >> silver_ai_classificacao_relatos_task
+    silver_ai_classificacao_relatos_task >> [status_ai_gold_task, nota_ai_gold_task, macro_categoria_ai_gold_task]

@@ -59,6 +59,24 @@ resource "databricks_notebook" "silver_ai_classificacao_relatos_notebook" {
   source   = "../app/src/silver_ai_classificacao_relatos.py"
 }
 
+resource "databricks_notebook" "status_ai_gold_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/status_ai_gold.py"
+  language = var.notebook_language
+  source   = "../app/src/status_ai_gold.py"
+}
+
+resource "databricks_notebook" "nota_ai_gold_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/nota_ai_gold.py"
+  language = var.notebook_language
+  source   = "../app/src/nota_ai_gold.py"
+}
+
+resource "databricks_notebook" "macro_categoria_ai_gold_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/macro_categoria_ai_gold.py"
+  language = var.notebook_language
+  source   = "../app/src/macro_categoria_ai_gold.py"
+}
+
 # Notebooks SQL para criação de databases e tabelas
 resource "databricks_notebook" "create_consumidor_tables_notebook" {
   path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/create_consumidor_tables.py"
