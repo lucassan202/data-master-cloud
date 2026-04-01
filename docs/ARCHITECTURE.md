@@ -11,46 +11,75 @@ O objetivo da migração foi eliminar a necessidade de infraestrutura física ge
 - **CI/CD integrado** — deploy automatizado via GitHub Actions
 - **Custo sob demanda** — recursos pagos apenas quando utilizados
 
-O projeto opera dois pipelines complementares de ingestão: um **mensal**, que baixa o CSV consolidado de reclamações do portal `dados.mj.gov.br`, e um **diário**, que faz web scraping incremental das reclamações publicadas em `consumidor.gov.br`. Os dados são processados em camadas de qualidade progressiva (Medallion Architecture) e disponibilizados em um dashboard analítico Databricks Lakeview.
+O projeto opera dois pipelines complementares de ingestão: um **mensal**, que baixa o CSV consolidado de reclamações do portal `dados.mj.gov.br`, e um **diário**, que faz web scraping incremental das reclamações publicadas em `consumidor.gov.br`. Os dados são processados em camadas de qualidade progressiva (Medallion Architecture), enriquecidos com **classificação automática via LLM** (macro-categoria, categoria, subcategoria, roteamento, prioridade e geração de respostas) e disponibilizados em dois dashboards analíticos Databricks Lakeview.
 
 ---
 
 ## Arquitetura de Alto Nível
 
-```
-                        ┌──────────────────────────────────────────────────┐
-                        │                   AWS Cloud                      │
-                         │                                                 │
-  dados.mj.gov.br ──►   │  Lambda (CSV Downloader)        [mensal]         │
-                        │        │                                        │
-  consumidor.gov.br ──► │  ECS Fargate (Selenium) ──► Lambda (Scraper)    │
-                        │        │                         │  [diário]    │
-                        │        └──────────┬──────────────┘              │
-                        │                   ▼                             │
-                        │              S3 (Data Lake)                     │
-                        │         ┌─────────────────┐                     │
-                        │         │  Bronze / Raw   │                     │
-                        │         └────────┬────────┘                     │
-                        │                  ▼                              │
-                        │         ┌─────────────────┐                     │
-                        │         │ Silver / Filtered│                     │
-                        │         └────────┬────────┘                     │
-                        │                  ▼                              │
-                        │         ┌─────────────────┐                     │
-                        │         │  Gold / Agregado │                     │
-                        │         └────────┬────────┘                     │
-                        │                  │                              │
-                        └──────────────────┼──────────────────────────────┘
-                                           │
-                                    ┌──────▼──────┐
-                                    │  Databricks  │  (processamento)
-                                    │  Airflow DAGs│  (orquestração)
-                                    └──────┬──────┘
-                                           │
-                                  ┌────────▼────────┐
-                                  │    Databricks    │
-                                  │Lakeview Dashboard│  (visualização)
-                                  └─────────────────┘
+```mermaid
+flowchart TB
+    subgraph Fontes Externas
+        MJ["dados.mj.gov.br\n(CSV Mensal)"]
+        CG["consumidor.gov.br\n(Reclamações Diárias)"]
+    end
+
+    subgraph AWS["AWS Cloud"]
+        LAMBDA_CSV["Lambda\nCSV Downloader"]
+        ECS["ECS Fargate\nSelenium Firefox"]
+        LAMBDA_SCREP["Lambda\nScraper"]
+        S3[("S3 Data Lake")]
+    end
+
+    subgraph Databricks
+        subgraph Bronze
+            B1["b_consumidor.consumidor\n(mensal)"]
+            B2["b_consumidor.consumidor_dia\n(diário)"]
+        end
+        subgraph Silver
+            S1["s_consumidor\n.consumidorservicosfinanceiros"]
+            S2["s_consumidor\n.ai_classificacao_relatos\n(LLM: GPT-5-2 / Llama 3.3 70B)"]
+        end
+        subgraph Gold
+            G1["grupoProblema"]
+            G2["mediaavaliacao"]
+            G3["mediaresposta"]
+            G4["reclamacaouf"]
+            G5["reclamacaotopten"]
+            G6["ai_macro_categoria"]
+            G7["ai_nota"]
+            G8["ai_status"]
+        end
+        AIRFLOW["Airflow DAGs\n(Orquestração)"]
+    end
+
+    subgraph Dashboards["Databricks Lakeview"]
+        DASH1["Dashboard Consumidor\n(Visão Mensal)"]
+        DASH2["Dashboard AI Gold\n(Visão Diária)"]
+    end
+
+    MJ -->|mensal| LAMBDA_CSV
+    CG -->|diário| ECS
+    ECS -->|Cloud Map DNS| LAMBDA_SCREP
+    LAMBDA_CSV --> S3
+    LAMBDA_SCREP --> S3
+
+    S3 --> B1
+    S3 --> B2
+    B1 --> S1
+    B2 --> S2
+    S1 --> G1 & G2 & G3 & G4 & G5
+    S2 --> G6 & G7 & G8
+
+    G1 & G2 & G3 & G4 & G5 --> DASH1
+    G6 & G7 & G8 --> DASH2
+
+    AIRFLOW -.->|orquestra| LAMBDA_CSV
+    AIRFLOW -.->|orquestra| ECS
+    AIRFLOW -.->|orquestra| LAMBDA_SCREP
+    AIRFLOW -.->|orquestra| Bronze
+    AIRFLOW -.->|orquestra| Silver
+    AIRFLOW -.->|orquestra| Gold
 ```
 
 ---
@@ -61,25 +90,28 @@ O projeto opera dois pipelines complementares de ingestão: um **mensal**, que b
 
 Duas funções Lambda são responsáveis pela ingestão de dados:
 
-| Função | Descrição | Arquivo |
-|--------|-----------|---------|
-| `download-csv-consumer` | Baixa o CSV mensal de reclamações de `dados.mj.gov.br` e salva no S3 | [app/src/lambda/lambda_download_csv.py](../app/src/lambda/lambda_download_csv.py) |
-| `screp` | Scraper Selenium que extrai o texto completo das reclamações via navegador headless | [app/src/lambda/screp_reclamacoes.py](../app/src/lambda/screp_reclamacoes.py) |
+| Função | Descrição | Runtime | Memória | Timeout | Arquivo |
+|--------|-----------|---------|---------|---------|--------|
+| `download-csv-consumer` | Baixa o CSV mensal de reclamações de `dados.mj.gov.br` e salva no S3 | Python 3.11 | 512 MB | 5 min | [app/src/lambda/lambda_download_csv.py](../app/src/lambda/lambda_download_csv.py) |
+| `screp` | Scraper Selenium que extrai o texto completo das reclamações via navegador headless. Conecta ao ECS Selenium via Cloud Map DNS (`SELENIUM_URL`). Roda em VPC (subnets privadas) com Selenium Layer. | Python 3.11 | 512–1024 MB | 15 min | [app/src/lambda/screp_reclamacoes.py](../app/src/lambda/screp_reclamacoes.py) |
 
-As Lambdas são empacotadas via `Makefile` e armazenadas no S3 antes do deploy pelo Terraform.
+As Lambdas são empacotadas via `Makefile` (`make build-csv`, `make build-screp`) e armazenadas no S3 antes do deploy pelo Terraform. Logs são enviados ao CloudWatch com retenção de 14 dias.
 
 ---
 
 ### ECS Fargate — Selenium Standalone
 
-O scraper Selenium exige um navegador real. Para isso, um container **Selenium Standalone** roda no ECS Fargate:
+O scraper Selenium exige um navegador real. Para isso, um container **Selenium Standalone Firefox** roda no ECS Fargate:
 
-- Imagem: configurável via variável Terraform (`var.docker_image_name`)
-- Comunicação: a Lambda conecta via DNS interno `selenium.<namespace>` (AWS Cloud Map)
-- Monitoramento: health check no endpoint `/status`
-- Logs: CloudWatch Logs com retenção de 7 dias
+- **Imagem:** configurável via variável Terraform (`var.docker_image_name`)
+- **Comunicação:** a Lambda conecta via DNS interno `selenium.<namespace>.local:4444` (AWS Cloud Map + Service Discovery)
+- **Health check:** `curl http://localhost:4444/status` (intervalo 30 s, timeout 10 min no startup)
+- **Monitoramento:** Container Insights habilitado no cluster ECS
+- **Logs:** CloudWatch Logs com retenção de 7 dias
+- **Recursos:** CPU e memória configuráveis via variáveis Terraform (`var.cpu`, `var.memory`)
+- **Variáveis de ambiente:** carregadas de arquivo no S3 (`_vars.env`)
 
-O ECS é orquestrado pelo Airflow — o `desired_count` do serviço é controlado dinamicamente e ignorado pelo Terraform (`lifecycle.ignore_changes`).
+O ECS é orquestrado pelo Airflow — o `desired_count` do serviço é controlado dinamicamente (0 quando ocioso, 1 durante execução) e ignorado pelo Terraform (`lifecycle.ignore_changes`). O container é ligado sob demanda pelo DAG diário e desligado após a conclusão, independente do resultado, evitando custos desnecessários.
 
 ---
 
@@ -87,23 +119,29 @@ O ECS é orquestrado pelo Airflow — o `desired_count` do serviço é controlad
 
 Substitui o cluster Hadoop/Spark on-premise. Responsável por todo o processamento das camadas de dados:
 
-- **Notebooks** gerenciados por Terraform ([IaC/notebooks.tf](../IaC/notebooks.tf))
-- **Jobs** automatizados com notificação por e-mail ([IaC/jobs.tf](../IaC/jobs.tf))
-- **Dashboard Lakeview** gerenciado por Terraform ([IaC/dashboards.tf](../IaC/dashboards.tf))
+- **16 Notebooks** gerenciados por Terraform ([IaC/notebooks.tf](../IaC/notebooks.tf))
+- **13 Jobs** automatizados com notificação por e-mail ([IaC/jobs.tf](../IaC/jobs.tf))
+- **2 Dashboards Lakeview** gerenciados por Terraform ([IaC/dashboards.tf](../IaC/dashboards.tf))
+- **Serverless SQL Warehouse** para execução dos notebooks
+- **Classificação via LLM** — utiliza `ai_query()` com modelos GPT-5-2 e Llama 3.3 70B
 - Autenticação via Service Principal (OAuth M2M)
 
 ---
 
-### Databricks Lakeview Dashboard
+### Databricks Lakeview Dashboards
 
-A visualização dos dados é feita por um **Dashboard Lakeview** nativo do Databricks, implantado automaticamente via Terraform a partir do arquivo [dash/dash_consumidor.lvdash.json](../dash/dash_consumidor.lvdash.json).
+A visualização dos dados é feita por **dois Dashboards Lakeview** nativos do Databricks, implantados automaticamente via Terraform.
 
-O dashboard consome as tabelas Gold e apresenta os seguintes componentes:
+#### Dashboard Consumidor (Visão Mensal)
+
+**Arquivo:** [dash/dash_consumidor.lvdash.json](../dash/dash_consumidor.lvdash.json)
+
+Consome as tabelas Gold do pipeline mensal e apresenta os seguintes componentes:
 
 **Datasets (queries SQL):**
 
 | Dataset | Tabela Gold | Descrição |
-|---------|-------------|-----------|
+|---------|-------------|----------|
 | `ds_reclamacao` | `g_consumidor.reclamacaotopten` | Top 10 reclamações por instituição |
 | `ds_mediaresposta` | `g_consumidor.mediaresposta` | Tempo médio de resposta por instituição |
 | `ds_mediaavaliacao` | `g_consumidor.mediaavaliacao` | Média de avaliação por instituição |
@@ -112,7 +150,7 @@ O dashboard consome as tabelas Gold e apresenta os seguintes componentes:
 **Visualizações:**
 
 | Tipo | Título | Descrição |
-|------|--------|-----------|
+|------|--------|----------|
 | KPI (counter) | Total Reclamações | Soma total de reclamações |
 | KPI (counter) | Média Tempo Resposta (dias) | Média geral do tempo de resposta |
 | KPI (counter) | Média Avaliação | Nota média dos consumidores |
@@ -122,6 +160,27 @@ O dashboard consome as tabelas Gold e apresenta os seguintes componentes:
 
 **Filtros globais:** Instituição Financeira e Ano-Mês, aplicados a todos os widgets simultaneamente.
 
+#### Dashboard AI Gold (Visão Diária)
+
+**Arquivo:** [dash/dash_ai_gold.lvdash.json](../dash/dash_ai_gold.lvdash.json)
+
+Consome as tabelas Gold do pipeline diário de classificação AI. Página: **"Análise IA Gold - Visão Diária"**.
+
+**Datasets (queries SQL):**
+
+| Dataset | Tabela Gold | Descrição |
+|---------|-------------|----------|
+| `ds_macro_categoria` | `g_consumidor.ai_macro_categoria` | Contagem de reclamações por macro-categoria (11 categorias) |
+| `ds_nota` | `g_consumidor.ai_nota` | Distribuição de notas dos consumidores |
+| `ds_status` | `g_consumidor.ai_status` | Distribuição por status de resolução |
+
+**Visualizações:**
+
+| Tipo | Título | Descrição |
+|------|--------|----------|
+| KPI (counter) | Total Relatos | Soma total de relatos classificados |
+| KPI (counter) | Nota Média Ponderada | Média ponderada das notas (nota × qtd / qtd) |
+
 ---
 
 ### S3 — Data Lake
@@ -130,9 +189,12 @@ O S3 é o armazenamento central do pipeline. Os dados são organizados por camad
 
 ```
 s3://{env}-{region}-data-master/
-├── raw/          # Arquivos CSV brutos (Bronze)
+├── raw/          # Arquivos CSV brutos (Bronze - mensal)
+├── screp/        # CSVs do web scraper (Bronze - diário) + arquivo bastão
 ├── silver/       # Dados filtrados em Parquet (Silver)
-└── gold/         # Agregações em Parquet (Gold)
+├── gold/         # Agregações em Parquet (Gold)
+├── tmp/          # Pacotes Lambda para deploy
+└── dags/         # DAGs do Airflow (sync via CI/CD em produção)
 ```
 
 O acesso ao S3 pelas Lambdas e pelo ECS é feito via **S3 Gateway Endpoint**, sem tráfego pela internet e sem custo adicional.
@@ -153,16 +215,15 @@ O acesso ao S3 pelas Lambdas e pelo ECS é feito via **S3 Gateway Endpoint**, se
 
 O pipeline de CI/CD é acionado automaticamente por **push** nas branches protegidas:
 
-```
-Push para branch
-    │
-    ├── Build Lambda packages (make all)
-    ├── Upload para S3 (aws s3 cp)
-    ├── terraform init
-    ├── terraform validate
-    ├── terraform plan
-    ├── terraform apply
-    └── Sync DAGs para S3 (apenas produção)
+```mermaid
+flowchart LR
+    PUSH["Push para branch"] --> BUILD["Build Lambda packages\n(make build-csv build-screp)"]
+    BUILD --> UPLOAD["Upload para S3\n(aws s3 cp)"]
+    UPLOAD --> TF_INIT["terraform init"]
+    TF_INIT --> TF_VALIDATE["terraform validate"]
+    TF_VALIDATE --> TF_PLAN["terraform plan"]
+    TF_PLAN --> TF_APPLY["terraform apply"]
+    TF_APPLY --> SYNC["Sync DAGs para S3\n(apenas produção)"]
 ```
 
 Workflows:
@@ -172,6 +233,8 @@ Workflows:
 | [.github/workflows/develop.yml](../.github/workflows/develop.yml) | Push para `develop` → deploy `dev` |
 | [.github/workflows/main.yml](../.github/workflows/main.yml) | Push para `main` → deploy `pro` + sync DAGs para S3 |
 | [.github/workflows/terraform.yml](../.github/workflows/terraform.yml) | Workflow reusável (chamado pelos dois acima) |
+
+O step **Sync DAGs** executa apenas no deploy de produção (`main`) e copia os arquivos de `app/src/airflow/dags/` para `s3://pro-us-east-2-data-master/dags/`, garantindo que o Airflow sempre tenha a versão mais recente das DAGs.
 
 ---
 
@@ -183,12 +246,16 @@ A arquitetura Medallion organiza os dados em três camadas de qualidade crescent
 
 **Objetivo:** Ingerir o dado exatamente como recebido, sem transformações.
 
-- **Fonte:** CSV mensal baixado de `dados.mj.gov.br` pela Lambda
-- **Formato de saída:** Parquet
-- **Tabela:** `b_consumidor.consumidor`
-- **Notebook:** [app/src/bronze.py](../app/src/bronze.py)
+A camada Bronze possui duas tabelas, uma para cada pipeline de ingestão:
 
-Nesta camada, todos os campos originais são preservados, incluindo dados de todos os segmentos econômicos. Serve como fonte de verdade imutável do dado bruto.
+| Tabela | Fonte | Frequência | Notebook |
+|--------|-------|------------|----------|
+| `b_consumidor.consumidor` | CSV mensal de `dados.mj.gov.br` | Mensal (dia 15) | [app/src/bronze.py](../app/src/bronze.py) |
+| `b_consumidor.consumidor_dia` | CSV do web scraper (`consumidor.gov.br`) | Diário (6h) | [app/src/bronze_screp.py](../app/src/bronze_screp.py) |
+
+**`consumidor`** — Todos os campos originais são preservados, incluindo dados de todos os segmentos econômicos. Serve como fonte de verdade imutável do dado bruto. Formato de saída: Parquet.
+
+**`consumidor_dia`** — Lê o CSV pipe-delimited (`|`) gerado pelo scraper diário com 10 campos (nomeempresa, status, temporesposta, dataocorrido, cidade, uf, relato, resposta, nota, comentario). Substitui os dados do dia anterior a cada execução (DELETE + INSERT).
 
 ---
 
@@ -205,19 +272,63 @@ A camada Silver elimina registros irrelevantes e padroniza os tipos de dados, re
 
 ---
 
+### Silver — Classificação AI por LLM
+
+**Objetivo:** Classificar automaticamente os relatos de reclamações utilizando modelos de linguagem (LLM), gerando categorização hierárquica, roteamento, prioridade e respostas sugeridas.
+
+- **Fonte:** `b_consumidor.consumidor_dia` (reclamações do scraper diário)
+- **Filtro:** Apenas reclamações da instituição **Santander**
+- **Tabela:** `s_consumidor.ai_classificacao_relatos` (19 colunas)
+- **Notebook:** [app/src/silver_ai_classificacao_relatos.py](../app/src/silver_ai_classificacao_relatos.py)
+
+A classificação é realizada em múltiplos níveis via função `ai_query()` do Databricks:
+
+| Nível | Descrição | Modelo | Qtd Opções |
+|-------|-----------|--------|------------|
+| **Macro-categoria** | Tipo de alto nível da reclamação | GPT-5-2 | 11 (Cobranças, Fraudes, Cartões, etc.) |
+| **Categoria** | Problema específico dentro da macro-categoria | GPT-5-2 | 37 |
+| **Subcategoria** | Classificação granular | GPT-5-2 | 23 |
+
+Após a classificação, regras determinísticas (CASE) atribuem:
+
+| Atributo | Descrição | Exemplo |
+|----------|-----------|--------|
+| **Roteamento** | Departamento responsável (8 opções) | SAC, Backoffice, Prevenção à Fraude |
+| **Prioridade** | Urgência de resposta | Alta / Média / Baixa |
+| **SLA (dias)** | Prazo máximo de resposta | 0 (Fraude/Compliance) a 5 (Atendimento) |
+
+**Geração de respostas:**
+
+| Resposta | Modelo | Condição |
+|----------|--------|----------|
+| Resposta sugerida | GPT-5-2 | Sempre gerada — tom empático e explicativo |
+| Resposta de reanálise | Llama 3.3 70B | Gerada apenas se `status = 'Não Resolvido'` — tom mais cuidadoso |
+
+---
+
 ### Gold — Dados Agregados para Análise
 
 **Objetivo:** Gerar visões analíticas prontas para consumo por ferramentas de BI.
 
-São produzidas **5 tabelas Gold**, cada uma com um foco analítico distinto:
+São produzidas **8 tabelas Gold**, divididas em dois grupos: **5 tabelas do pipeline mensal** e **3 tabelas do pipeline diário AI**.
+
+#### Gold — Pipeline Mensal
 
 | Tabela | Descrição | Notebook |
-|--------|-----------|---------|
+|--------|-----------|-------|
 | `g_consumidor.grupoProblema` | Top 10 grupos de problemas mais reclamados | [app/src/problema_gold.py](../app/src/problema_gold.py) |
 | `g_consumidor.mediaavaliacao` | Média de avaliação dos consumidores por empresa | [app/src/avaliacao_gold.py](../app/src/avaliacao_gold.py) |
 | `g_consumidor.mediaresposta` | Tempo médio de resposta por empresa | [app/src/resposta_gold.py](../app/src/resposta_gold.py) |
 | `g_consumidor.reclamacaouf` | Volume de reclamações por estado (UF) | [app/src/uf_gold.py](../app/src/uf_gold.py) |
-| `g_consumidor.reclamacao` | Ranking das reclamações mais frequentes | [app/src/reclamacao_gold.py](../app/src/reclamacao_gold.py) |
+| `g_consumidor.reclamacaotopten` | Ranking das reclamações mais frequentes | [app/src/reclamacao_gold.py](../app/src/reclamacao_gold.py) |
+
+#### Gold — Pipeline Diário AI
+
+| Tabela | Descrição | Notebook |
+|--------|-----------|-------|
+| `g_consumidor.ai_macro_categoria` | Contagem de reclamações por macro-categoria + data de ocorrência | [app/src/macro_categoria_ai_gold.py](../app/src/macro_categoria_ai_gold.py) |
+| `g_consumidor.ai_nota` | Contagem de reclamações por nota + data de ocorrência | [app/src/nota_ai_gold.py](../app/src/nota_ai_gold.py) |
+| `g_consumidor.ai_status` | Contagem de reclamações por status de resolução + data de ocorrência | [app/src/status_ai_gold.py](../app/src/status_ai_gold.py) |
 
 ---
 
@@ -254,26 +365,38 @@ Os jobs Databricks são executados via `DatabricksRunNowOperator` com o parâmet
 
 ---
 
-### DAG Diário — Web Scraper
+### DAG Diário — Web Scraper + Classificação AI
 
 **Arquivo:** [app/src/airflow/dags/dag_screp.py](../app/src/airflow/dags/dag_screp.py)  
 **Schedule:** Diariamente às 6h  
-**Objetivo:** Extrair incrementalmente o texto completo das reclamações publicadas em `consumidor.gov.br`.
+**Objetivo:** Extrair incrementalmente as reclamações de `consumidor.gov.br`, ingeri-las na camada Bronze, classificá-las via LLM na camada Silver AI e gerar as agregações Gold AI.
 
-```
-start_ecs_selenium (desired_count = 1)
-     │
-     ▼
-wait_selenium_ready (health check /status, timeout 10 min)
-     │
-     ▼
-invoke_lambda_scraper
-     │
-     ▼
-stop_ecs_selenium (desired_count = 0)  ← executa sempre (ALL_DONE)
+```mermaid
+flowchart TB
+    START["start_selenium\n(desired_count = 1)"] --> WAIT["wait_selenium_ready\n(health check /status\ntimeout 10 min)"]
+    WAIT --> LAMBDA["invoke_lambda_screp\n(timeout 15 min)"]
+    LAMBDA --> STOP["stop_selenium\n(desired_count = 0)\n← TriggerRule.ALL_DONE"]
+    LAMBDA --> BRONZE["bronze_screp\n(Databricks Job)"]
+    STOP --> BRONZE
+    BRONZE --> SILVER_AI["silver_ai_classificacao_relatos\n(LLM: GPT-5-2 + Llama 3.3 70B)"]
+    SILVER_AI --> STATUS["status_ai_gold"]
+    SILVER_AI --> NOTA["nota_ai_gold"]
+    SILVER_AI --> MACRO["macro_categoria_ai_gold"]
 ```
 
-O scraper utiliza um mecanismo de **bastão** (arquivo de controle no S3) que armazena o timestamp da última execução, garantindo que apenas reclamações novas sejam coletadas a cada execução. O container ECS Selenium é ligado sob demanda e desligado após a conclusão, independente do resultado (`TriggerRule.ALL_DONE`), evitando custos desnecessários.
+**Fases do pipeline:**
+
+1. **Coleta (ECS + Lambda):** O container Selenium é iniciado sob demanda. Após o health check, a Lambda `screp` executa o web scraping incremental via bastão (arquivo de controle no S3 com timestamp da última execução). Apenas reclamações novas são coletadas.
+
+2. **Cleanup (ECS):** O container é desligado (`desired_count = 0`) independente do resultado da Lambda (`TriggerRule.ALL_DONE`), evitando custos desnecessários.
+
+3. **Ingestão (Bronze Screp):** O CSV gerado pelo scraper é carregado na tabela `b_consumidor.consumidor_dia`.
+
+4. **Classificação AI (Silver):** Os relatos são classificados via LLM em 3 níveis hierárquicos, com atribuição automática de roteamento, prioridade, SLA e geração de respostas.
+
+5. **Agregação (Gold AI):** Três tabelas Gold são geradas em paralelo: `ai_status`, `ai_nota` e `ai_macro_categoria`.
+
+Os jobs Databricks são executados via `DatabricksRunNowOperator` com o parâmetro `datRefCarga` e `llm_model` gerados dinamicamente.
 
 ---
 
@@ -291,9 +414,45 @@ Exemplo: `dev-us-east-2-data-master`
 
 ---
 
+## Gerenciamento de Tabelas
+
+O projeto inclui dois scripts para gerenciamento do ciclo de vida das tabelas Databricks:
+
+| Script | Descrição | Notebook |
+|--------|-----------|----------|
+| **Create** | Cria os 3 databases e as 10 tabelas com schemas, locations e grants | [app/src/create_consumidor_tables.py](../app/src/create_consumidor_tables.py) |
+| **Drop** | Remove todas as tabelas e databases na ordem correta (Gold → Silver → Bronze) | [app/src/drop_consumidor_tables.py](../app/src/drop_consumidor_tables.py) |
+
+**Estrutura completa de tabelas:**
+
+```
+b_consumidor (Bronze)
+├── consumidor              # CSV mensal
+└── consumidor_dia           # Scraper diário
+
+s_consumidor (Silver)
+├── consumidorservicosfinanceiros  # Filtro Serviços Financeiros
+└── ai_classificacao_relatos       # Classificação LLM (19 colunas)
+
+g_consumidor (Gold)
+├── grupoProblema            # Top 10 problemas
+├── mediaavaliacao           # Média avaliação por empresa
+├── mediaresposta            # Tempo médio resposta
+├── reclamacaotopten         # Ranking reclamações
+├── reclamacaouf             # Reclamações por UF
+├── ai_macro_categoria       # Contagem por macro-categoria
+├── ai_nota                  # Contagem por nota
+└── ai_status                # Contagem por status
+```
+
+Ambos os scripts são idempotentes (`IF NOT EXISTS` / `IF EXISTS`) e executados como Databricks Jobs independentes.
+
+---
+
 ## Melhorias Futuras
 
-- Análise de sentimentos no texto das reclamações (NLP)
 - Alertas automáticos para anomalias nos KPIs Gold
 - Novas visões analíticas (sazonalidade, evolução temporal)
 - Streaming para ingestão em tempo real (complementando o batch mensal)
+- Expansão da classificação AI para outras instituições financeiras além do Santander
+- Dashboards comparativos entre classificação AI e dados consolidados mensais
