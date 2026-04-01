@@ -2,7 +2,7 @@ import io
 import csv
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 import boto3
 from botocore.exceptions import ClientError
@@ -30,6 +30,10 @@ BUCKET_TEMPLATE = "{env}-us-east-2-data-master"
 S3_PREFIX = "screp"
 BST_KEY = f"{S3_PREFIX}/data_hora.bst"
 DATE_FMT = "%d/%m/%Y %H:%M:%S"
+
+# Fuso horário de Brasília (UTC-3) — usado para garantir que o nome do arquivo
+# gerado pela Lambda (que executa em UTC) esteja alinhado com a data local BRT.
+BRT = timezone(timedelta(hours=-3))
 
 # URL do servidor Selenium configurável por variável de ambiente,
 # facilitando troca entre ambientes sem alteração de código.
@@ -100,7 +104,7 @@ def save_csv_to_s3(s3_client, bucket: str, records: list) -> str:
     :param records: lista de dicts com os campos definidos em CSV_FIELDS
     :return: chave S3 do arquivo gerado
     """
-    timestamp = datetime.now().strftime("%Y%m%d")
+    timestamp = datetime.now(BRT).strftime("%Y%m%d")
     key = f"{S3_PREFIX}/reclamacoes_{timestamp}.csv"
 
     # Monta o CSV inteiramente em memória para evitar I/O em disco

@@ -1,0 +1,645 @@
+{
+  "datasets": [
+    {
+      "name": "ds_macro_categoria",
+      "displayName": "Macro Categoria IA",
+      "queryLines": [
+        "SELECT\n",
+        "  macro_categoria AS Macro_Categoria,\n",
+        "  dataocorrido AS Data_Ocorrido,\n",
+        "  qtd AS Qtd\n",
+        "FROM g_consumidor.ai_macro_categoria\n"
+      ]
+    },
+    {
+      "name": "ds_nota",
+      "displayName": "Nota IA",
+      "queryLines": [
+        "SELECT\n",
+        "  nota AS Nota,\n",
+        "  dataocorrido AS Data_Ocorrido,\n",
+        "  qtd AS Qtd,\n",
+        "  CAST(nota AS INT) * qtd AS Nota_Ponderada\n",
+        "FROM g_consumidor.ai_nota\n",
+        "WHERE nota <> '' AND nota REGEXP '^[0-9]+$'\n"
+      ]
+    },
+    {
+      "name": "ds_status",
+      "displayName": "Status IA",
+      "queryLines": [
+        "SELECT\n",
+        "  status AS Status,\n",
+        "  dataocorrido AS Data_Ocorrido,\n",
+        "  qtd AS Qtd\n",
+        "FROM g_consumidor.ai_status\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "page_canvas",
+      "displayName": "Análise IA Gold - Visão Diária",
+      "layout": [
+        {
+          "widget": {
+            "name": "kpi_total_relatos",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_macro_categoria",
+                  "fields": [
+                    {
+                      "name": "sum(Qtd)",
+                      "expression": "SUM(`Qtd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Total Relatos"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(Qtd)"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_nota_media",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_nota",
+                  "fields": [
+                    {
+                      "name": "nota_media_ponderada",
+                      "expression": "SUM(`Nota_Ponderada`) / SUM(`Qtd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Nota Média Ponderada"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "nota_media_ponderada"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi_total_categorias",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_macro_categoria",
+                  "fields": [
+                    {
+                      "name": "count_distinct_categorias",
+                      "expression": "COUNT(DISTINCT `Macro_Categoria`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Nº Macro Categorias"
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "count_distinct_categorias"
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_macro_categoria",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_macro_categoria",
+                  "fields": [
+                    {
+                      "name": "sum(Qtd)",
+                      "expression": "SUM(`Qtd`)"
+                    },
+                    {
+                      "name": "Macro_Categoria",
+                      "expression": "`Macro_Categoria`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Relatos por Macro Categoria"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(Qtd)",
+                  "axis": {
+                    "title": "Quantidade"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "Macro_Categoria",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_status",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_status",
+                  "fields": [
+                    {
+                      "name": "sum(Qtd)",
+                      "expression": "SUM(`Qtd`)"
+                    },
+                    {
+                      "name": "Status",
+                      "expression": "`Status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Relatos por Status"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(Qtd)",
+                  "axis": {
+                    "title": "Quantidade"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "Status",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "bar_nota",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_nota",
+                  "fields": [
+                    {
+                      "name": "sum(Qtd)",
+                      "expression": "SUM(`Qtd`)"
+                    },
+                    {
+                      "name": "Nota",
+                      "expression": "`Nota`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Distribuição de Notas"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(Qtd)",
+                  "axis": {
+                    "title": "Quantidade"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "Nota",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "label"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "line_evolucao_macro",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_macro_categoria",
+                  "fields": [
+                    {
+                      "name": "Data_Ocorrido",
+                      "expression": "`Data_Ocorrido`"
+                    },
+                    {
+                      "name": "sum(Qtd)",
+                      "expression": "SUM(`Qtd`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Evolução Diária de Relatos"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Data_Ocorrido",
+                  "axis": {
+                    "title": "Data"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(Qtd)",
+                  "axis": {
+                    "title": "Quantidade"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 9,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "line_evolucao_status",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_status",
+                  "fields": [
+                    {
+                      "name": "Data_Ocorrido",
+                      "expression": "`Data_Ocorrido`"
+                    },
+                    {
+                      "name": "sum(Qtd)",
+                      "expression": "SUM(`Qtd`)"
+                    },
+                    {
+                      "name": "Status",
+                      "expression": "`Status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Evolução Diária por Status"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Data_Ocorrido",
+                  "axis": {
+                    "title": "Data"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(Qtd)",
+                  "axis": {
+                    "title": "Quantidade"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Status",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "line_evolucao_nota",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_nota",
+                  "fields": [
+                    {
+                      "name": "Data_Ocorrido",
+                      "expression": "`Data_Ocorrido`"
+                    },
+                    {
+                      "name": "sum(Qtd)",
+                      "expression": "SUM(`Qtd`)"
+                    },
+                    {
+                      "name": "Nota",
+                      "expression": "`Nota`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "showTitle": true,
+                "title": "Evolução Diária por Nota"
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Data_Ocorrido",
+                  "axis": {
+                    "title": "Data"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(Qtd)",
+                  "axis": {
+                    "title": "Quantidade"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Nota",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 15,
+            "width": 6,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "page_global_filters",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter_dataocorrido",
+            "queries": [
+              {
+                "name": "filter_ds_macro_categoria_Data_Ocorrido",
+                "query": {
+                  "datasetName": "ds_macro_categoria",
+                  "fields": [
+                    {
+                      "name": "Data_Ocorrido",
+                      "expression": "`Data_Ocorrido`"
+                    },
+                    {
+                      "name": "Data_Ocorrido_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_nota_Data_Ocorrido",
+                "query": {
+                  "datasetName": "ds_nota",
+                  "fields": [
+                    {
+                      "name": "Data_Ocorrido",
+                      "expression": "`Data_Ocorrido`"
+                    },
+                    {
+                      "name": "Data_Ocorrido_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "filter_ds_status_Data_Ocorrido",
+                "query": {
+                  "datasetName": "ds_status",
+                  "fields": [
+                    {
+                      "name": "Data_Ocorrido",
+                      "expression": "`Data_Ocorrido`"
+                    },
+                    {
+                      "name": "Data_Ocorrido_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Data Ocorrido"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "Data_Ocorrido",
+                    "queryName": "filter_ds_macro_categoria_Data_Ocorrido"
+                  },
+                  {
+                    "fieldName": "Data_Ocorrido",
+                    "queryName": "filter_ds_nota_Data_Ocorrido"
+                  },
+                  {
+                    "fieldName": "Data_Ocorrido",
+                    "queryName": "filter_ds_status_Data_Ocorrido"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
