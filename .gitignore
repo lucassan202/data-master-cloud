@@ -210,3 +210,8 @@ __marimo__/
 *zip
 *.hcl
 .vscode
+*.pdf
+*.html
+*.png
+/scripts/
+.codex

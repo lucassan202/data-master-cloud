@@ -272,7 +272,7 @@ Relato: ", relato)
                     CASE
                       WHEN status = 'Não Resolvido' THEN
                         ai_query(
-                          "databricks-meta-llama-3-3-70b-instruct",
+                          "{llm_model}",
                           CONCAT(
 "O cliente avaliou o atendimento como insatisfatório.
 

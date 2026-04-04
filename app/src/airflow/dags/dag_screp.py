@@ -63,7 +63,7 @@ def _check_selenium_ready():
 with DAG(
     dag_id="screp_daily",
     description="Coleta diária de reclamações - consumidor.gov.br",
-    schedule="0 6 * * *",
+    schedule="0 15 * * *",  # 12:00 BRT (UTC-3)
     start_date=datetime(2025, 1, 1),
     catchup=False,
     default_args=default_args,

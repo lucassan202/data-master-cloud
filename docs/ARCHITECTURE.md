@@ -2,7 +2,7 @@
 
 ## Contexto do Projeto
 
-O **data-master-cloud** é a evolução cloud-native do projeto [data-master](https://github.com/besgam/data-master), que analisava reclamações de consumidores publicadas no portal [consumidor.gov.br](https://www.consumidor.gov.br) utilizando um cluster Hadoop/Spark on-premise.
+O **data-master-cloud** é a evolução cloud-native do projeto [data-master](https://github.com/lucassan202/data-master), que analisava reclamações de consumidores publicadas no portal [consumidor.gov.br](https://www.consumidor.gov.br) utilizando um cluster Hadoop/Spark on-premise.
 
 O objetivo da migração foi eliminar a necessidade de infraestrutura física gerenciada manualmente, substituindo-a por serviços gerenciados da AWS e Databricks. Com isso, o projeto ganhou:
 
@@ -38,7 +38,7 @@ flowchart TB
         end
         subgraph Silver
             S1["s_consumidor\n.consumidorservicosfinanceiros"]
-            S2["s_consumidor\n.ai_classificacao_relatos\n(LLM: GPT-5-2 / Llama 3.3 70B)"]
+            S2["s_consumidor\n.ai_classificacao_relatos\n(LLM: GPT-5-2)"]
         end
         subgraph Gold
             G1["grupoProblema"]
@@ -123,7 +123,7 @@ Substitui o cluster Hadoop/Spark on-premise. Responsável por todo o processamen
 - **13 Jobs** automatizados com notificação por e-mail ([IaC/jobs.tf](../IaC/jobs.tf))
 - **2 Dashboards Lakeview** gerenciados por Terraform ([IaC/dashboards.tf](../IaC/dashboards.tf))
 - **Serverless SQL Warehouse** para execução dos notebooks
-- **Classificação via LLM** — utiliza `ai_query()` com modelos GPT-5-2 e Llama 3.3 70B
+- **Classificação via LLM** — utiliza `ai_query()` com modelo GPT-5-2 (parametrizável)
 - Autenticação via Service Principal (OAuth M2M)
 
 ---
@@ -170,7 +170,7 @@ Consome as tabelas Gold do pipeline diário de classificação AI. Página: **"A
 
 | Dataset | Tabela Gold | Descrição |
 |---------|-------------|----------|
-| `ds_macro_categoria` | `g_consumidor.ai_macro_categoria` | Contagem de reclamações por macro-categoria (11 categorias) |
+| `ds_macro_categoria` | `g_consumidor.ai_macro_categoria` | Contagem de reclamações por macro-categoria (12 categorias) |
 | `ds_nota` | `g_consumidor.ai_nota` | Distribuição de notas dos consumidores |
 | `ds_status` | `g_consumidor.ai_status` | Distribuição por status de resolução |
 
@@ -189,11 +189,12 @@ O S3 é o armazenamento central do pipeline. Os dados são organizados por camad
 
 ```
 s3://{env}-{region}-data-master/
-├── raw/          # Arquivos CSV brutos (Bronze - mensal)
 ├── screp/        # CSVs do web scraper (Bronze - diário) + arquivo bastão
-├── silver/       # Dados filtrados em Parquet (Silver)
-├── gold/         # Agregações em Parquet (Gold)
-├── tmp/          # Pacotes Lambda para deploy
+├── data/   
+    ├── b_consumidor/       # Dados brutos em Parquet  (Bronze)      
+    ├── s_consumidor/       # Dados filtrados em Parquet  (Silver)
+    ├── g_consumidor/       # Agregações em Parquet (Gold)
+├── tmp/          # Pacotes Lambda para deploy e arquivos CSV brutos (Bronze - mensal)
 └── dags/         # DAGs do Airflow (sync via CI/CD em produção)
 ```
 
@@ -250,12 +251,12 @@ A camada Bronze possui duas tabelas, uma para cada pipeline de ingestão:
 
 | Tabela | Fonte | Frequência | Notebook |
 |--------|-------|------------|----------|
-| `b_consumidor.consumidor` | CSV mensal de `dados.mj.gov.br` | Mensal (dia 15) | [app/src/bronze.py](../app/src/bronze.py) |
-| `b_consumidor.consumidor_dia` | CSV do web scraper (`consumidor.gov.br`) | Diário (6h) | [app/src/bronze_screp.py](../app/src/bronze_screp.py) |
+| `b_consumidor.consumidor` | CSV mensal de `dados.mj.gov.br` | Mensal | [app/src/bronze.py](../app/src/bronze.py) |
+| `b_consumidor.consumidor_dia` | CSV do web scraper (`consumidor.gov.br`) | Diário | [app/src/bronze_screp.py](../app/src/bronze_screp.py) |
 
 **`consumidor`** — Todos os campos originais são preservados, incluindo dados de todos os segmentos econômicos. Serve como fonte de verdade imutável do dado bruto. Formato de saída: Parquet.
 
-**`consumidor_dia`** — Lê o CSV pipe-delimited (`|`) gerado pelo scraper diário com 10 campos (nomeempresa, status, temporesposta, dataocorrido, cidade, uf, relato, resposta, nota, comentario). Substitui os dados do dia anterior a cada execução (DELETE + INSERT).
+**`consumidor_dia`** — Lê o CSV pipe-delimited (`|`) gerado pelo scraper diário com 10 campos (nomeempresa, status, temporesposta, dataocorrido, cidade, uf, relato, resposta, nota, comentario).
 
 ---
 
@@ -302,7 +303,7 @@ Após a classificação, regras determinísticas (CASE) atribuem:
 | Resposta | Modelo | Condição |
 |----------|--------|----------|
 | Resposta sugerida | GPT-5-2 | Sempre gerada — tom empático e explicativo |
-| Resposta de reanálise | Llama 3.3 70B | Gerada apenas se `status = 'Não Resolvido'` — tom mais cuidadoso |
+| Resposta de reanálise | GPT-5-2 | Gerada apenas se `status = 'Não Resolvido'` — tom mais cuidadoso |
 
 ---
 
@@ -339,26 +340,19 @@ O projeto utiliza **dois DAGs** no Airflow, cada um responsável por um pipeline
 ### DAG Mensal — ETL Databricks
 
 **Arquivo:** [app/src/airflow/dags/databricks_etl_dag.py](../app/src/airflow/dags/databricks_etl_dag.py)  
-**Schedule:** Dia 15 de cada mês, à meia-noite  
+**Schedule:** Mensal  
 **Objetivo:** Baixar o CSV consolidado mensal, processar nas camadas Bronze → Silver → Gold.
 
-```
-create_tables
-     │
-     ▼
-  download_csv (Lambda)
-     │
-     ▼
-   bronze
-     │
-     ▼
-   silver
-     │
-     ├──► problema_gold
-     ├──► avaliacao_gold
-     ├──► mediaresposta_gold
-     ├──► reclamacaouf_gold
-     └──► reclamacao_gold
+```mermaid
+flowchart TB
+    CT["create_tables"] --> DL["download_csv\n(Lambda)"]
+    DL --> BR["bronze"]
+    BR --> SL["silver"]
+    SL --> G1["problema_gold"]
+    SL --> G2["avaliacao_gold"]
+    SL --> G3["mediaresposta_gold"]
+    SL --> G4["reclamacaouf_gold"]
+    SL --> G5["reclamacao_gold"]
 ```
 
 Os jobs Databricks são executados via `DatabricksRunNowOperator` com o parâmetro `dat_ref_carga` gerado dinamicamente. Em caso de falha, cada task faz até 3 retentativas com intervalo de 1 minuto.
@@ -378,7 +372,7 @@ flowchart TB
     LAMBDA --> STOP["stop_selenium\n(desired_count = 0)\n← TriggerRule.ALL_DONE"]
     LAMBDA --> BRONZE["bronze_screp\n(Databricks Job)"]
     STOP --> BRONZE
-    BRONZE --> SILVER_AI["silver_ai_classificacao_relatos\n(LLM: GPT-5-2 + Llama 3.3 70B)"]
+    BRONZE --> SILVER_AI["silver_ai_classificacao_relatos\n(LLM: GPT-5-2)"]
     SILVER_AI --> STATUS["status_ai_gold"]
     SILVER_AI --> NOTA["nota_ai_gold"]
     SILVER_AI --> MACRO["macro_categoria_ai_gold"]
@@ -453,6 +447,5 @@ Ambos os scripts são idempotentes (`IF NOT EXISTS` / `IF EXISTS`) e executados 
 
 - Alertas automáticos para anomalias nos KPIs Gold
 - Novas visões analíticas (sazonalidade, evolução temporal)
-- Streaming para ingestão em tempo real (complementando o batch mensal)
 - Expansão da classificação AI para outras instituições financeiras além do Santander
 - Dashboards comparativos entre classificação AI e dados consolidados mensais

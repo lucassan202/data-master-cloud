@@ -6,7 +6,7 @@
       "queryLines": [
         "SELECT\n",
         "  macro_categoria AS Macro_Categoria,\n",
-        "  dataocorrido AS Data_Ocorrido,\n",
+        "  TO_DATE(dataocorrido, 'dd/MM/yyyy') AS Data_Ocorrido,\n",
         "  qtd AS Qtd\n",
         "FROM g_consumidor.ai_macro_categoria\n"
       ]
@@ -17,7 +17,7 @@
       "queryLines": [
         "SELECT\n",
         "  nota AS Nota,\n",
-        "  dataocorrido AS Data_Ocorrido,\n",
+        "  TO_DATE(dataocorrido, 'dd/MM/yyyy') AS Data_Ocorrido,\n",
         "  qtd AS Qtd,\n",
         "  CAST(nota AS INT) * qtd AS Nota_Ponderada\n",
         "FROM g_consumidor.ai_nota\n",
@@ -30,7 +30,7 @@
       "queryLines": [
         "SELECT\n",
         "  status AS Status,\n",
-        "  dataocorrido AS Data_Ocorrido,\n",
+        "  TO_DATE(dataocorrido, 'dd/MM/yyyy') AS Data_Ocorrido,\n",
         "  qtd AS Qtd\n",
         "FROM g_consumidor.ai_status\n"
       ]
@@ -377,7 +377,7 @@
                     "title": "Data"
                   },
                   "scale": {
-                    "type": "categorical"
+                    "type": "temporal"
                   }
                 },
                 "y": {
@@ -439,7 +439,7 @@
                     "title": "Data"
                   },
                   "scale": {
-                    "type": "categorical"
+                    "type": "temporal"
                   }
                 },
                 "y": {
@@ -507,7 +507,7 @@
                     "title": "Data"
                   },
                   "scale": {
-                    "type": "categorical"
+                    "type": "temporal"
                   }
                 },
                 "y": {
