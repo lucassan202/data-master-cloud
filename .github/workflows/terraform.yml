@@ -46,7 +46,6 @@ jobs:
           echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT     
 
       - name: Setup Python
-        if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
