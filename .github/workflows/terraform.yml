@@ -42,80 +42,79 @@ jobs:
       - name: Read destroy configuration
         id: read-destroy-config
         run: |
-          DESTROY="$(jq -r '.${{ inputs.environment }}' IaC/destroy_config.json)"
-          echo $DESTROY
-          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT
+          DESTROY="$(jq -r '.${{ inputs.environment }}' ./IaC/destroy_config.json)"
+          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT     
           
-      # - name: Setup Python
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: '3.11'
+      - name: Setup Python
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      # - name: Build Lambda Package Screp Download CSV
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   run: make build-csv
+      - name: Build Lambda Package Screp Download CSV
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        run: make build-csv
 
-      # - name: Build Lambda Package Screp Selenium
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   run: make build-screp      
+      - name: Build Lambda Package Screp Selenium
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        run: make build-screp      
 
-      # - name: Setup Terraform
-      #   uses: hashicorp/setup-terraform@v3
-      #   with:
-      #     terraform_version: 1.8.3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.3
 
-      # - name: Install Databricks CLI
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   uses: databricks/setup-cli@main
+      - name: Install Databricks CLI
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        uses: databricks/setup-cli@main
 
-      # - name: Configure AWS credentials
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: ${{ inputs.aws-assume-role-arn }}
-      #     role-session-name: GitHub_to_AWS_via_FederatedOIDC
-      #     aws-region: ${{ inputs.aws-region }}
+      - name: Configure AWS credentials
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-assume-role-arn }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ inputs.aws-region }}
 
-      # - name: Upload Lambda to S3
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   run: |
-      #     aws s3 cp lambda_function.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/lambda_function.zip
-      #     aws s3 cp selenium_layer.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/selenium_layer.zip           
+      - name: Upload Lambda to S3
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        run: |
+          aws s3 cp lambda_function.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/lambda_function.zip
+          aws s3 cp selenium_layer.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/selenium_layer.zip           
 
-      # - name: Terraform Init
-      #   run: |
-      #     cd IaC && terraform init \
-      #       -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
-      #       -backend-config="key=${{ github.event.repository.name }}" \
-      #       -backend-config="region=${{ inputs.aws-region }}" \
-      #       -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
+      - name: Terraform Init
+        run: |
+          cd IaC && terraform init \
+            -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
+            -backend-config="key=${{ github.event.repository.name }}" \
+            -backend-config="region=${{ inputs.aws-region }}" \
+            -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
       
-      # - name: Terraform Validate
-      #   run: terraform validate        
+      - name: Terraform Validate
+        run: terraform validate        
 
-      # - name: Terraform Destroy
-      #   if: steps.read-destroy-config.outputs.destroy == 'true'
-      #   id: terraform-destroy
-      #   run: cd IaC &&
-      #     terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-      #     terraform destroy -auto-approve
-      #       -var="env=${{ inputs.environment }}"
-      #       -var="environment=${{ inputs.environment }}"
+      - name: Terraform Destroy
+        if: steps.read-destroy-config.outputs.destroy == 'true'
+        id: terraform-destroy
+        run: cd IaC &&
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          terraform destroy -auto-approve
+            -var="env=${{ inputs.environment }}"
+            -var="environment=${{ inputs.environment }}"
       
-      # - name: Terraform Plan
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   id: terraform-plan
-      #   run: cd IaC && 
-      #     terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-      #     terraform plan
-      #       -var="env=${{ inputs.environment }}"
-      #       -var="environment=${{ inputs.environment }}"
-      #       -out="${{ inputs.environment }}.plan"
+      - name: Terraform Plan
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        id: terraform-plan
+        run: cd IaC && 
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          terraform plan
+            -var="env=${{ inputs.environment }}"
+            -var="environment=${{ inputs.environment }}"
+            -out="${{ inputs.environment }}.plan"
 
-      # - name: Terraform Apply
-      #   if: steps.read-destroy-config.outputs.destroy != 'true'
-      #   id: terraform-apply      
-      #   run: cd IaC &&
-      #     terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
-      #     terraform apply "${{ inputs.environment }}.plan"
+      - name: Terraform Apply
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        id: terraform-apply      
+        run: cd IaC &&
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} &&
+          terraform apply "${{ inputs.environment }}.plan"
