@@ -66,6 +66,74 @@ output "drop_databases_job_url" {
   value = databricks_job.drop_databases_job.url
 }
 
+resource "databricks_job" "silver_ai_classificacao_relatos_job" {
+
+  name = "Silver AI Classificacao Relatos Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "silver_ai_classificacao_relatos_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.silver_ai_classificacao_relatos_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+        "llm_model"   = "databricks-gpt-5-2"
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+output "silver_ai_classificacao_relatos_job_url" {
+  value = databricks_job.silver_ai_classificacao_relatos_job.url
+}
+
+resource "databricks_job" "bronze_screp_job" {
+
+  name = "Bronze Screp Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "bronze_screp_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.bronze_screp_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+        "env"         = var.environment
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+output "bronze_screp_job_url" {
+  value = databricks_job.bronze_screp_job.url
+}
+
 resource "databricks_job" "bronze_job" {
 
   name = "Bronze Job"
@@ -262,6 +330,93 @@ resource "databricks_job" "avaliacao_gold_job" {
 
     notebook_task {
       notebook_path = databricks_notebook.avaliacao_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+resource "databricks_job" "status_ai_gold_job" {
+
+  name = "Status AI Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "status_ai_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.status_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+resource "databricks_job" "nota_ai_gold_job" {
+
+  name = "Nota AI Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "nota_ai_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.nota_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+      }
+    }
+  }
+
+  email_notifications {
+    on_success = var.emails
+    on_failure = var.emails
+  }
+}
+
+resource "databricks_job" "macro_categoria_ai_gold_job" {
+
+  name = "Macro Categoria AI Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "macro_categoria_ai_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.macro_categoria_ai_gold_notebook.path
       base_parameters = {
         "datRefCarga" = var.datrefcarga
       }

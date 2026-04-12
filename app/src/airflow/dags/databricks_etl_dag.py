@@ -17,11 +17,11 @@ def get_dat_ref_carga():
     Se a variável 'dat_ref_carga' estiver vazia, usa a data atual - 30 dias.
     Formato de saída: YYYY-MM
     """
-    if Variable.get('dat_ref_carga') == "":
+    if Variable.get('dat_ref_carga_m').strip() == "":
         dat_ref_carga = datetime.now() - timedelta(days=30)
         dat_ref_carga = dat_ref_carga.strftime("%Y-%m")
     else:    
-        dat_ref_carga = Variable.get('dat_ref_carga')
+        dat_ref_carga = Variable.get('dat_ref_carga_m')
     
     return dat_ref_carga
 
@@ -38,7 +38,7 @@ with DAG(
     dag_id='databricks_etl_pipeline',
     default_args=default_args,
     description='DAG para executar jobs Databricks do pipeline ETL (bronze >> silver >> gold)',
-    schedule_interval='0 0 15 * *',  # Executa no dia 15 de cada mês à meia-noite
+    schedule='0 0 15 * *',  # Executa no dia 15 de cada mês à meia-noite
     start_date=datetime(2026, 1, 15),
     catchup=False,
     tags=['databricks', 'etl', 'bronze', 'silver', 'gold'],
@@ -47,7 +47,7 @@ with DAG(
     # Task Lambda - Download dos arquivos CSV do dados.mj.gov.br para S3
     lambda_download_task = LambdaInvokeFunctionOperator(
         task_id='invoke_lambda_download_csv',
-        function_name='download-csv-consumer',
+        function_name=f'download-csv-consumer-{Variable.get("environment")}',
         payload=json.dumps({"datRefCarga": get_dat_ref_carga(), "ENV": Variable.get('environment')}),
     )
 
