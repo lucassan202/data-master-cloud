@@ -44,6 +44,7 @@ jobs:
         run: |
           DESTROY="$(jq -r '.${{ inputs.environment }}' ./IaC/destroy_config.json)"
           echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT     
+          echo $destroy          
           
       - name: Setup Python
         if: steps.read-destroy-config.outputs.destroy != 'true'
