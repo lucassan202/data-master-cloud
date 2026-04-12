@@ -44,7 +44,7 @@ jobs:
         run: |
           DESTROY="$(jq -r '.${{ inputs.environment }}' ./IaC/destroy_config.json)"
           echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT     
-          
+
       - name: Setup Python
         if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: actions/setup-python@v5
@@ -68,8 +68,7 @@ jobs:
         if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: databricks/setup-cli@main
 
-      - name: Configure AWS credentials
-        if: steps.read-destroy-config.outputs.destroy != 'true'
+      - name: Configure AWS credentials        
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ inputs.aws-assume-role-arn }}
