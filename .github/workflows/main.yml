@@ -25,7 +25,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Read destroy configuration
+        id: read-destroy-config
+        run: |
+          DESTROY="$(jq -r '.${{ inputs.environment }}' ./IaC/destroy_config.json)"
+          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT   
+
       - name: Configure AWS credentials
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::120945137272:role/github-actions-data-master
@@ -33,5 +40,6 @@ jobs:
           aws-region: us-east-2
 
       - name: Upload DAGs to S3
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         run: |
           aws s3 cp app/src/airflow/dags/ s3://pro-us-east-2-data-master/dags/ --recursive --exclude "*" --include "*.py"
