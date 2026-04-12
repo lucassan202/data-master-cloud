@@ -39,6 +39,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Read destroy configuration
+        id: read-destroy-config
+        run: |
+          DESTROY="$(jq -r '.${{ inputs.environment }}' ./IaC/destroy_config.json)"
+          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT     
+          
       - name: Setup Python
         if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: actions/setup-python@v5
@@ -74,13 +80,7 @@ jobs:
         if: steps.read-destroy-config.outputs.destroy != 'true'
         run: |
           aws s3 cp lambda_function.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/lambda_function.zip
-          aws s3 cp selenium_layer.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/selenium_layer.zip      
-
-      - name: Read destroy configuration
-        id: read-destroy-config
-        run: |
-          DESTROY="$(jq -r '.${{ inputs.environment }}' ./IaC/destroy_config.json)"
-          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT          
+          aws s3 cp selenium_layer.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/selenium_layer.zip           
 
       - name: Terraform Init
         run: |
