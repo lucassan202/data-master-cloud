@@ -1,4 +1,4 @@
-# Arquitetura e Documentação Técnica — data-master-cloud
+# Projeto Data Master Consumidor Serviços Financeiros
 
 ## Contexto do Projeto
 
@@ -12,6 +12,12 @@ O objetivo da migração foi eliminar a necessidade de infraestrutura física ge
 - **Custo sob demanda** — recursos pagos apenas quando utilizados
 
 O projeto opera dois pipelines complementares de ingestão: um **mensal**, que baixa o CSV consolidado de reclamações do portal `dados.mj.gov.br`, e um **diário**, que faz web scraping incremental das reclamações publicadas em `consumidor.gov.br`. Os dados são processados em camadas de qualidade progressiva (Medallion Architecture), enriquecidos com **classificação automática via LLM** (macro-categoria, categoria, subcategoria, roteamento, prioridade e geração de respostas) e disponibilizados em dois dashboards analíticos Databricks Lakeview.
+
+## Projeto e Autor
+
+- GitHub do projeto: [data-master-cloud](https://github.com/lucassan202/data-master-cloud)
+- **Lucas dos Santos Silva**
+- **Matrícula: t780907**
 
 ---
 
