@@ -19,8 +19,6 @@ cloudmap_namespace_name = "data-master"
 # Lambda
 lambda_timeout          = 900
 lambda_memory_mb        = 512
-# Gerar antes do apply: ver instruções de packaging abaixo
-lambda_layer_zip_path    = "../selenium_layer.zip"
 
 # IAM roles existentes
 ecs_task_execution_role_arn = "arn:aws:iam::120945137272:role/ecsTaskExecutionRole"

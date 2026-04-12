@@ -104,11 +104,6 @@ variable "lambda_execution_role_arn" {
   type        = string
 }
 
-variable "lambda_layer_zip_path" {
-  description = "Caminho local para o ZIP do layer Selenium"
-  type        = string
-}
-
 variable "lambda_timeout" {
   description = "Timeout das funções Lambda em segundos"
   type        = number

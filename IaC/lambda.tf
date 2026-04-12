@@ -8,7 +8,6 @@ resource "aws_lambda_function" "download_csv_lambda" {
   handler          = "lambda_download_csv.lambda_handler"
   s3_bucket        = "${var.environment}-us-east-2-data-master"
   s3_key           = "tmp/lambda_function.zip"
-  source_code_hash = filebase64sha256("../lambda_function.zip")
 
   runtime = "python3.11"
   timeout = var.lambda_timeout
@@ -29,8 +28,8 @@ resource "aws_lambda_function" "download_csv_lambda" {
 
 resource "aws_lambda_layer_version" "selenium" {
   layer_name          = "${local.name_prefix}-selenium-layer"
-  filename            = var.lambda_layer_zip_path
-  source_code_hash    = filebase64sha256(var.lambda_layer_zip_path)
+  s3_bucket           = "${var.environment}-us-east-2-data-master"
+  s3_key              = "tmp/selenium_layer.zip"
   compatible_runtimes = ["python3.11", "python3.12"]
   description         = "Selenium 4.x client para Lambda"
 }
@@ -50,7 +49,6 @@ resource "aws_lambda_function" "screp" {
   s3_bucket         = "${var.environment}-us-east-2-data-master"
   s3_key            = "tmp/selenium_layer.zip"
   handler           = "screp_reclamacoes.lambda_handler"  
-  source_code_hash  = filebase64sha256(var.lambda_layer_zip_path)
 
   layers = [aws_lambda_layer_version.selenium.arn]
 

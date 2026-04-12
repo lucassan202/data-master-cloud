@@ -46,14 +46,17 @@ jobs:
           echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT     
 
       - name: Setup Python
+        if: steps.read-destroy-config.outputs.destroy != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Build Lambda Package Screp Download CSV        
+      - name: Build Lambda Package Screp Download CSV
+        if: steps.read-destroy-config.outputs.destroy != 'true'        
         run: make build-csv
 
-      - name: Build Lambda Package Screp Selenium        
+      - name: Build Lambda Package Screp Selenium   
+        if: steps.read-destroy-config.outputs.destroy != 'true'     
         run: make build-screp      
 
       - name: Setup Terraform
