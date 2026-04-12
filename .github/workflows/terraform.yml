@@ -51,12 +51,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Build Lambda Package Screp Download CSV
-        if: steps.read-destroy-config.outputs.destroy != 'true'
+      - name: Build Lambda Package Screp Download CSV        
         run: make build-csv
 
-      - name: Build Lambda Package Screp Selenium
-        if: steps.read-destroy-config.outputs.destroy != 'true'
+      - name: Build Lambda Package Screp Selenium        
         run: make build-screp      
 
       - name: Setup Terraform
