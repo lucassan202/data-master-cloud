@@ -42,7 +42,7 @@ jobs:
       - name: Read destroy configuration
         id: read-destroy-config
         run: |
-          DESTROY="$(jq -r '.pro' ./IaC/destroy_config.json)"
+          DESTROY="$(jq -r '.${{ inputs.environment }}' ./IaC/destroy_config.json)"
           echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT     
 
       - name: Setup Python
