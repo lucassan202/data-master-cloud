@@ -116,7 +116,7 @@ with DAG(
         job_name="Silver AI Classificacao Relatos Job",
         notebook_params={
             "datRefCarga": get_dat_ref_carga(),
-            "llm_model": "databricks-gpt-5-2",
+            "llm_model": "databricks-qwen3-next-80b-a3b-instruct",
         },
         databricks_conn_id="databricks_default",
     )

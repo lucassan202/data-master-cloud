@@ -85,7 +85,7 @@ resource "databricks_job" "silver_ai_classificacao_relatos_job" {
       notebook_path = databricks_notebook.silver_ai_classificacao_relatos_notebook.path
       base_parameters = {
         "datRefCarga" = var.datrefcarga
-        "llm_model"   = "databricks-gpt-5-2"
+        "llm_model"   = "databricks-qwen3-next-80b-a3b-instruct"
       }
     }
   }
