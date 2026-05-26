@@ -215,5 +215,5 @@ __marimo__/
 *.png
 /scripts/
 .codex
-/output
 /tmp
+/output/slides

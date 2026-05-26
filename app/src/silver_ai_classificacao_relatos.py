@@ -317,7 +317,7 @@ Regras:
 if __name__ == "__main__":
     # Parâmetros recebidos via Databricks Widgets
     dbutils.widgets.text("datRefCarga", "")  # noqa: F821
-    dbutils.widgets.text("llm_model", "databricks-gpt-5-2")  # noqa: F821
+    dbutils.widgets.text("llm_model", "databricks-qwen3-next-80b-a3b-instruct")  # noqa: F821
 
     datRefCarga = dbutils.widgets.get("datRefCarga")  # noqa: F821
     llm_model = dbutils.widgets.get("llm_model")  # noqa: F821
@@ -326,7 +326,7 @@ if __name__ == "__main__":
         raise ValueError("O parâmetro 'datRefCarga' é obrigatório e não foi informado.")
 
     if not llm_model:
-        llm_model = "databricks-gpt-5-2"
+        llm_model = "databricks-qwen3-next-80b-a3b-instruct"
 
     log.info(f"Parâmetros recebidos — datRefCarga: {datRefCarga}, llm_model: {llm_model}")
 
