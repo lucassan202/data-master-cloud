@@ -1,5 +1,8 @@
 import logging
-from pyspark.sql.functions import lit
+import re
+import unicodedata
+
+from pyspark.sql.functions import col, lit
 from pyspark.sql.types import StructType
 
 # ---------------------------------------------------------------------------
@@ -10,6 +13,50 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
 )
 log = logging.getLogger("bronze")
+
+
+def normalize_column_name(name):
+    """Normaliza cabeçalhos para permitir variações de acentos e separadores."""
+    without_accents = unicodedata.normalize("NFKD", name)
+    without_accents = "".join(
+        char for char in without_accents
+        if not unicodedata.combining(char)
+    )
+    return re.sub(r"[^a-z0-9]", "", without_accents.lower())
+
+
+def build_source_column_mapping(source_columns):
+    """Cria o mapa normalizado -> nome original e rejeita duplicidades."""
+    mapping = {}
+    for source_column in source_columns:
+        normalized = normalize_column_name(source_column)
+        if not normalized:
+            raise ValueError(
+                f"Cabeçalho inválido: '{source_column}' não possui caracteres válidos"
+            )
+        if normalized in mapping:
+            raise ValueError(
+                "Cabeçalhos duplicados após normalização: "
+                f"'{mapping[normalized]}' e '{source_column}'"
+            )
+        mapping[normalized] = source_column
+    return mapping
+
+
+def select_bronze_columns(df, schema):
+    """Seleciona colunas pelo nome, preenchendo ausentes com NULL."""
+    source_columns = build_source_column_mapping(df.columns)
+    selected_columns = []
+
+    for field in schema.fields:
+        source_column = source_columns.get(normalize_column_name(field.name))
+        if source_column is None:
+            selected_columns.append(lit(None).cast(field.dataType).alias(field.name))
+            log.warning("Coluna '%s' ausente no CSV; preenchendo com NULL", field.name)
+        else:
+            selected_columns.append(col(source_column).cast(field.dataType).alias(field.name))
+
+    return df.select(*selected_columns)
 
 
 # ---------------------------------------------------------------------------
@@ -57,20 +104,29 @@ class Bronze:
         try:
             log.info(f"Iniciando leitura do CSV basecompleta — datRefCarga: {datRefCarga}")
             pathCsv = f"s3://{env}-us-east-2-data-master/tmp/basecompleta{datRefCarga}*.csv"
-            df = (
-                spark.read.schema(schema)
+            raw_df = (
+                spark.read
                 .option("header", True)
+                .option("inferSchema", False)
                 .option("sep", ";")
                 .csv(pathCsv)
             )
+            df = select_bronze_columns(raw_df, schema)
             log.info("Leitura do CSV concluída com sucesso")
 
             df = df.withColumn("datRefCarga", lit(datRefCarga))
 
-            spark.sql(f"DELETE FROM b_consumidor.consumidor WHERE datRefCarga = '{datRefCarga}'")
-            log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
+            if df.limit(1).count() == 0:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
 
-            df.write.mode("append").insertInto("b_consumidor.consumidor")
+            (
+                df.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datRefCarga = '{datRefCarga}'")
+                .saveAsTable("b_consumidor.consumidor")
+            )
             log.info("Bronze — job finalizado com sucesso")
 
         except Exception as e:

@@ -32,10 +32,17 @@ class ReclamacaoTopTen:
                 .limit(10)
             )
 
-            spark.sql(f"DELETE FROM g_consumidor.reclamacaotopten WHERE datRefCarga = '{datRefCarga}'")
-            log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
+            if consumidor.limit(1).count() == 0:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
 
-            consumidor.write.mode("append").insertInto("g_consumidor.reclamacaotopten")
+            (
+                consumidor.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datRefCarga = '{datRefCarga}'")
+                .saveAsTable("g_consumidor.reclamacaotopten")
+            )
             log.info("ReclamacaoTopTen — job finalizado com sucesso")
 
         except Exception as e:

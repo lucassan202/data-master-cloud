@@ -25,7 +25,7 @@ class SilverAiClassificacaoRelatos:
                 f"Iniciando Silver AI Classificação Relatos — datRefCarga: {datRefCarga}, llm_model: {llm_model}"
             )
 
-            spark.sql(f"""
+            classificacao = spark.sql(f"""
                 WITH base AS (
                   SELECT *
                   FROM b_consumidor.consumidor_dia
@@ -300,9 +300,20 @@ Regras:
                   FROM resposta
                 )
 
-                INSERT INTO {TARGET_TABLE}
                 SELECT * FROM resposta_reanalise
             """)  # noqa: F821
+
+            if classificacao.limit(1).count() == 0:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
+
+            (
+                classificacao.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datrefcarga = '{datRefCarga}'")
+                .saveAsTable(TARGET_TABLE)
+            )
 
             log.info(f"Silver AI Classificação Relatos — job finalizado com sucesso para datRefCarga: {datRefCarga}")
 

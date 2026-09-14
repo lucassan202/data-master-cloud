@@ -47,10 +47,17 @@ class BronzeScrep:
 
             df = df.withColumn("datRefCarga", lit(datRefCarga))
 
-            spark.sql(f"DELETE FROM b_consumidor.consumidor_dia WHERE datRefCarga = '{datRefCarga}'")  # noqa: F821
-            log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
+            if df.limit(1).count() == 0:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
 
-            df.write.mode("append").insertInto("b_consumidor.consumidor_dia")
+            (
+                df.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datRefCarga = '{datRefCarga}'")
+                .saveAsTable("b_consumidor.consumidor_dia")
+            )
             log.info("Bronze Screp — job finalizado com sucesso")
 
         except Exception as e:

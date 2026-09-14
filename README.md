@@ -47,22 +47,65 @@ export TF_VAR_databricks_client_id="<client-id>"
 export TF_VAR_databricks_client_secret="<client-secret>"
 ```
 
----
-
-### 3. Empacote as funções Lambda
+Para executar o Airflow localmente, copie o arquivo de exemplo e preencha as
+configurações SMTP no arquivo local:
 
 ```bash
-make all
+cp .env.example .env
 ```
 
-Isso cria os arquivos `lambda_function.zip` (downloader CSV) e `selenium_layer.zip` (layer do Selenium).
+Configure no `.env` as variáveis `AIRFLOW__SMTP__SMTP_HOST`,
+`AIRFLOW__SMTP__SMTP_PORT`, `AIRFLOW__SMTP__SMTP_USER`,
+`AIRFLOW__SMTP__SMTP_PASSWORD`, `AIRFLOW__SMTP__SMTP_MAIL_FROM` e as opções
+`AIRFLOW__SMTP__SMTP_STARTTLS`/`AIRFLOW__SMTP__SMTP_SSL`. Os destinatários das
+DAGs podem ser definidos em `AIRFLOW_NOTIFICATION_EMAILS`, separados por
+vírgulas. O arquivo `.env` pode conter credenciais e não deve ser versionado;
+use apenas placeholders no `.env.example`.
+
+No Airflow provisionado pela EC2, as mesmas variáveis devem ser fornecidas pelo
+secret manager no arquivo `/etc/airflow/airflow.env`. O `.env` local é usado
+somente pelo Docker Compose.
+
+Os destinatários de alertas e o principal dos GRANTs são configuráveis no
+`IaC/jobs.auto.tfvars` pelas variáveis `notification_emails` e
+`databricks_grant_principal`. Na ausência de configuração, ambas usam
+`lucas_san20@hotmail.com`.
+
+O Airflow envia alertas de falha das DAGs via SMTP. Antes de iniciar os
+serviços, o arquivo `/etc/airflow/airflow.env` deve ser preenchido pelo
+mecanismo de secrets do ambiente com as variáveis `AIRFLOW__SMTP__SMTP_HOST`,
+`AIRFLOW__SMTP__SMTP_PORT`, `AIRFLOW__SMTP__SMTP_USER`,
+`AIRFLOW__SMTP__SMTP_PASSWORD`, `AIRFLOW__SMTP__SMTP_MAIL_FROM` e,
+quando aplicável, `AIRFLOW__SMTP__SMTP_STARTTLS`/`AIRFLOW__SMTP__SMTP_SSL`.
 
 ---
 
-### 4. Inicialize o Terraform
+### 3. Inicialize o Terraform
+
+O state dos buckets S3 é separado do state da aplicação. O `make build-all` inicializa e aplica os dois states automaticamente.
+
+Para inicialização manual dos buckets:
 
 ```bash
-terraform -chdir=IaC init
+terraform -chdir=IaC/buckets init \
+  -backend-config="bucket=<bucket-do-estado>" \
+  -backend-config="key=data-master-cloud-buckets" \
+  -backend-config="region=us-east-2" \
+  -backend-config="dynamodb_table=<tabela-de-lock>"
+terraform -chdir=IaC/buckets workspace select dev
+terraform -chdir=IaC/buckets plan \
+  -var="env=dev" \
+  -var="aws_region=us-east-2"
+```
+
+Para a infraestrutura da aplicação:
+
+```bash
+terraform -chdir=IaC init \
+  -backend-config="bucket=<bucket-do-estado>" \
+  -backend-config="key=data-master-cloud" \
+  -backend-config="region=us-east-2" \
+  -backend-config="dynamodb_table=<tabela-de-lock>"
 ```
 
 Para ambientes distintos, use workspaces:
@@ -72,21 +115,71 @@ terraform -chdir=IaC workspace new dev
 terraform -chdir=IaC workspace select dev
 ```
 
----
+### 4. Configure o Airflow local
 
-### 5. Planeje e aplique a infraestrutura
+Para subir o Airflow localmente, copie o arquivo de exemplo e preencha as credenciais:
 
 ```bash
-# Visualize as mudanças
-terraform -chdir=IaC plan
+cp .env.example .env
+```
 
+### 5. Prepare e suba o ambiente
+
+O comando abaixo empacota as Lambdas, publica os pacotes no S3, aplica a infraestrutura Terraform e sobe o Airflow via Docker Compose:
+
+Opcionalmente, visualize antes as mudanças que serão aplicadas:
+
+```bash
+terraform -chdir=IaC plan \
+  -var="env=dev" \
+  -var="environment=dev"
+```
+
+Para outro ambiente, substitua `dev` pelo valor desejado.
+
+```bash
+make build-all
+```
+
+O ambiente padrão é `dev`, a região padrão é `us-east-2` e o bucket dos pacotes é `dev-us-east-2-data-master`. Esses valores podem ser sobrescritos:
+
+```bash
+make build-all ENVIRONMENT=pro AWS_REGION=us-east-2 S3_BUCKET=pro-us-east-2-data-master ...
+```
+
+O comando cria `lambda_function.zip` (downloader CSV) e `selenium_layer.zip` (layer do Selenium), copiando-os para `s3://<bucket>/tmp/` antes do `terraform apply`.
+
+> O `build-all` executa `terraform apply -auto-approve` e pode criar recursos e custos na AWS. Verifique as variáveis `TF_VAR_*` e as credenciais AWS antes de executá-lo.
+
+O backend Terraform precisa estar inicializado previamente com `terraform init`, conforme o passo anterior.
+
+Comandos úteis do Airflow:
+
+O serviço `airflow-init` inicializa o banco, cria o usuário administrador, as conexões `aws_default` e `databricks_default` e as variáveis das DAGs. Acesse http://localhost:8080 usando as credenciais definidas em `.env`.
+
+Comandos úteis:
+
+```bash
+docker compose logs -f airflow-init
+docker compose logs -f airflow-scheduler
+docker compose restart
+docker compose down
+```
+
+Este Compose é destinado ao desenvolvimento (`dev`). Em produção, o Airflow continua sendo provisionado pela infraestrutura Terraform em EC2, com PostgreSQL em RDS.
+
+---
+
+### 6. Terraform manual
+
+```bash
 # Aplique
 terraform -chdir=IaC apply
 ```
 
 ---
 
-### 6. CI/CD via GitHub Actions
+### 7. CI/CD via GitHub Actions
 
 O deploy automatizado é ativado por push na branch:
 
@@ -101,6 +194,10 @@ O workflow reusável está em [.github/workflows/terraform.yml](.github/workflow
 3. Executa `terraform init / plan / apply`
 
 > Para destruir a infraestrutura, defina `"destroy": true` em `IaC/destroy_config.json` e abra um PR.
+
+### Airflow
+
+O ambiente `pro` provisiona o Airflow em uma EC2 AWS `t3.medium`, com PostgreSQL RDS privado, sincronização dos DAGs pelo bucket S3 e acesso inicial à UI na porta 8080.
 
 ---
 

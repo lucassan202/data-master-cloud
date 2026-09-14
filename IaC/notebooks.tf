@@ -14,7 +14,7 @@ resource "databricks_notebook" "bronze_screp_notebook" {
 }
 
 output "notebook_url" {
- value = databricks_notebook.bronze_notebook.url
+  value = databricks_notebook.bronze_notebook.url
 }
 
 resource "databricks_notebook" "silver_notebook" {

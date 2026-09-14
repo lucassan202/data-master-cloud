@@ -32,10 +32,17 @@ class StatusAiClassificacao:
                 .select("status", "dataocorrido", "datrefcarga", "qtd")
             )
 
-            spark.sql(f"DELETE FROM g_consumidor.ai_status WHERE datrefcarga = '{datRefCarga}'")
-            log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
+            if classificacao.limit(1).count() == 0:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
 
-            classificacao.write.mode("append").insertInto("g_consumidor.ai_status")
+            (
+                classificacao.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datrefcarga = '{datRefCarga}'")
+                .saveAsTable("g_consumidor.ai_status")
+            )
             log.info("StatusAiClassificacao — job finalizado com sucesso")
 
         except Exception as e:

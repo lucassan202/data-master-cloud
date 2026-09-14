@@ -91,19 +91,6 @@ variable "health_check_path" {
   default     = "/"
 }
 
-variable "ecs_task_execution_role_arn" {
-  description = "ARN da IAM Role de execução das tasks ECS"
-  type        = string
-}
-
-# ---------------------------------------------------------------------------
-# Lambda — geral
-# ---------------------------------------------------------------------------
-variable "lambda_execution_role_arn" {
-  description = "ARN da IAM Role de execução da Lambda screp"
-  type        = string
-}
-
 variable "lambda_timeout" {
   description = "Timeout das funções Lambda em segundos"
   type        = number
@@ -128,12 +115,6 @@ variable "lambda_memory_size" {
   description = "Memória da Lambda download-csv em MB"
   type        = number
   default     = 512
-}
-
-variable "lambda_role_arn" {
-  description = "ARN da IAM Role existente para execução da Lambda"
-  type        = string
-  default     = "arn:aws:iam::120945137272:role/lambda_execution_role"
 }
 
 # ---------------------------------------------------------------------------
@@ -163,7 +144,39 @@ variable "datrefcarga" {
   type        = string
 }
 
-variable "emails" {
-  description = "Lista de e-mails para notificação de sucesso ou falha"
+variable "notification_emails" {
+  description = "Lista de e-mails para notificação de falha no Databricks e Airflow"
   type        = list(string)
+  default     = ["lucas_san20@hotmail.com"]
+}
+
+variable "databricks_grant_principal" {
+  description = "Usuário ou grupo Databricks que receberá os GRANTs nas tabelas"
+  type        = string
+  default     = "lucas_san20@hotmail.com"
+}
+
+variable "airflow_admin_username" {
+  description = "Usuário administrador do Airflow"
+  type        = string
+  default     = "admin"
+}
+
+variable "airflow_admin_password" {
+  description = "Senha do administrador do Airflow"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "airflow_admin_email" {
+  description = "E-mail do administrador do Airflow"
+  type        = string
+  default     = "admin@example.com"
+}
+
+variable "airflow_ssh_cidr_blocks" {
+  description = "CIDRs autorizados a acessar SSH e a UI do Airflow"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }
