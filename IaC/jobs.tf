@@ -17,14 +17,14 @@ resource "databricks_job" "create_databases_job" {
     notebook_task {
       notebook_path = databricks_notebook.create_consumidor_tables_notebook.path
       base_parameters = {
-        "env" = var.environment
-      }      
+        "env"                        = var.environment
+        # "databricks_grant_principal" = var.databricks_grant_principal
+      }
     }
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -52,13 +52,12 @@ resource "databricks_job" "drop_databases_job" {
       notebook_path = databricks_notebook.drop_consumidor_tables_notebook.path
       base_parameters = {
         "env" = var.environment
-      }      
+      }
     }
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -91,8 +90,7 @@ resource "databricks_job" "silver_ai_classificacao_relatos_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -125,8 +123,7 @@ resource "databricks_job" "bronze_screp_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -147,20 +144,19 @@ resource "databricks_job" "bronze_job" {
   }
 
   task {
-    task_key = "bronze_task"    
+    task_key = "bronze_task"
 
     notebook_task {
       notebook_path = databricks_notebook.bronze_notebook.path
       base_parameters = {
         "datRefCarga" = var.datrefcarga
-        "env" = var.environment
+        "env"         = var.environment
       }
     }
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -181,7 +177,7 @@ resource "databricks_job" "silver_job" {
   }
 
   task {
-    task_key = "silver_task"    
+    task_key = "silver_task"
 
     notebook_task {
       notebook_path = databricks_notebook.silver_notebook.path
@@ -192,8 +188,7 @@ resource "databricks_job" "silver_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -210,7 +205,7 @@ resource "databricks_job" "problema_gold_job" {
   }
 
   task {
-    task_key = "problema_gold_task"   
+    task_key = "problema_gold_task"
 
     notebook_task {
       notebook_path = databricks_notebook.problema_gold_notebook.path
@@ -221,8 +216,7 @@ resource "databricks_job" "problema_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -239,7 +233,7 @@ resource "databricks_job" "reclamacao_gold_job" {
   }
 
   task {
-    task_key = "reclamacao_gold_task"    
+    task_key = "reclamacao_gold_task"
 
     notebook_task {
       notebook_path = databricks_notebook.reclamacao_gold_notebook.path
@@ -250,8 +244,7 @@ resource "databricks_job" "reclamacao_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -268,7 +261,7 @@ resource "databricks_job" "resposta_gold_job" {
   }
 
   task {
-    task_key = "resposta_gold_task"    
+    task_key = "resposta_gold_task"
 
     notebook_task {
       notebook_path = databricks_notebook.resposta_gold_notebook.path
@@ -279,8 +272,7 @@ resource "databricks_job" "resposta_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -297,7 +289,7 @@ resource "databricks_job" "uf_gold_job" {
   }
 
   task {
-    task_key = "uf_gold_task"    
+    task_key = "uf_gold_task"
 
     notebook_task {
       notebook_path = databricks_notebook.uf_gold_notebook.path
@@ -308,8 +300,7 @@ resource "databricks_job" "uf_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -326,7 +317,7 @@ resource "databricks_job" "avaliacao_gold_job" {
   }
 
   task {
-    task_key = "avaliacao_gold_task"    
+    task_key = "avaliacao_gold_task"
 
     notebook_task {
       notebook_path = databricks_notebook.avaliacao_gold_notebook.path
@@ -337,8 +328,7 @@ resource "databricks_job" "avaliacao_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -366,8 +356,7 @@ resource "databricks_job" "status_ai_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -395,8 +384,7 @@ resource "databricks_job" "nota_ai_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }
 
@@ -424,7 +412,6 @@ resource "databricks_job" "macro_categoria_ai_gold_job" {
   }
 
   email_notifications {
-    on_success = var.emails
-    on_failure = var.emails
+    on_failure = var.notification_emails
   }
 }

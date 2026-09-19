@@ -1,5 +1,6 @@
 # Projeto Data Master Consumidor Serviços Financeiros
 
+
 ## Contexto do Projeto
 
 O **data-master-cloud** é a evolução cloud-native do projeto [data-master](https://github.com/lucassan202/data-master), que analisava reclamações de consumidores publicadas no portal [consumidor.gov.br](https://www.consumidor.gov.br) utilizando um cluster Hadoop/Spark on-premise.
@@ -17,9 +18,129 @@ O projeto opera dois pipelines complementares de ingestão: um **mensal**, que b
 
 - GitHub do projeto: [data-master-cloud](https://github.com/lucassan202/data-master-cloud)
 - **Lucas dos Santos Silva**
-- **Matrícula: xxxxxxx**
+- **Matrícula: t780907**
 
 ---
+
+## Quick Start
+
+### Pré-requisitos
+
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) configurado com credenciais válidas
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.3
+- [Python](https://www.python.org/downloads/) >= 3.10
+- `make` disponível no terminal
+- Acesso ao workspace do Databricks
+- Docker Engine e Docker Compose v2 (para executar o Airflow local em `dev`)
+
+---
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/lucassan202/data-master-cloud
+cd data-master-cloud
+```
+
+---
+
+### 2. Configure as variáveis de infraestrutura
+
+Edite o arquivo `IaC/terraform.tfvars` com os valores do seu ambiente:
+
+```hcl
+project     = "data-master"
+environment = "dev"
+aws_region  = "us-east-2"
+```
+
+Variáveis sensíveis (Databricks) devem ser configuradas como **secrets no GitHub Actions** ou exportadas como variáveis de ambiente locais:
+
+```bash
+export TF_VAR_databricks_host="https://<workspace>.azuredatabricks.net"
+export TF_VAR_databricks_client_id="<client-id>"
+export TF_VAR_databricks_client_secret="<client-secret>"
+```
+
+### Airflow local (dev)
+
+O Airflow pode ser executado localmente com o Compose da raiz do projeto. Configure as credenciais e os parâmetros em `.env`:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+O `airflow-init` executa a migração do banco e, de forma idempotente, cria o usuário administrador, as conexões `aws_default` e `databricks_default` e as variáveis `env`, `environment`, `dat_ref_carga`, `dat_ref_carga_m`, `aws_region` e os nomes dos recursos AWS. A interface fica disponível em http://localhost:8080.
+
+Para acompanhar ou encerrar o ambiente:
+
+```bash
+docker compose logs -f airflow-init
+docker compose restart
+docker compose down
+```
+
+O ambiente local possui PostgreSQL (metadados), Redis (broker Celery), webserver, scheduler, worker e triggerer. Ele monta diretamente `app/src/airflow/dags` e chama os mesmos jobs Databricks, Lambdas e serviços ECS definidos pelo Terraform. Em produção, a arquitetura usa Airflow em EC2, PostgreSQL em RDS e sincronização dos DAGs pelo S3; o Compose não substitui essa infraestrutura.
+
+---
+
+### 3. Empacote as funções Lambda
+
+```bash
+make all
+```
+
+Isso cria os arquivos `lambda_function.zip` (downloader CSV) e `selenium_layer.zip` (layer do Selenium).
+
+---
+
+### 4. Inicialize o Terraform
+
+```bash
+terraform -chdir=IaC init
+```
+
+Para ambientes distintos, use workspaces:
+
+```bash
+terraform -chdir=IaC workspace new dev
+terraform -chdir=IaC workspace select dev
+```
+
+---
+
+### 5. Planeje e aplique a infraestrutura
+
+```bash
+# Visualize as mudanças
+terraform -chdir=IaC plan
+
+# Aplique
+terraform -chdir=IaC apply
+```
+
+---
+
+### 6. CI/CD via GitHub Actions
+
+O deploy automatizado é ativado por push na branch:
+
+| Branch    | Ambiente |
+|-----------|----------|
+| `develop` | `dev`    |
+| `main`    | `pro`    |
+
+O workflow reusável está em [.github/workflows/terraform.yml](../.github/workflows/terraform.yml). Ele:
+1. Empacota as funções Lambda
+2. Faz upload dos pacotes para o S3
+3. Executa `terraform init / plan / apply`
+
+> Para destruir a infraestrutura, defina `"destroy": true` em `IaC/destroy_config.json` e abra um PR.
+
+---
+
+
 
 ## Arquitetura de Alto Nível
 

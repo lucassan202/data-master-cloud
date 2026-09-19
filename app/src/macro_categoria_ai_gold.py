@@ -32,10 +32,17 @@ class MacroCategoriaAiClassificacao:
                 .select("macro_categoria", "dataocorrido", "datrefcarga", "qtd")
             )
 
-            spark.sql(f"DELETE FROM g_consumidor.ai_macro_categoria WHERE datrefcarga = '{datRefCarga}'")
-            log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
+            if classificacao.limit(1).count() == 0:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
 
-            classificacao.write.mode("append").insertInto("g_consumidor.ai_macro_categoria")
+            (
+                classificacao.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datrefcarga = '{datRefCarga}'")
+                .saveAsTable("g_consumidor.ai_macro_categoria")
+            )
             log.info("MacroCategoriaAiClassificacao — job finalizado com sucesso")
 
         except Exception as e:

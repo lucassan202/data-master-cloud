@@ -8,7 +8,7 @@ module "lambda_sg" {
   vpc_id      = module.vpc.vpc_id
 
   ingress_with_cidr_blocks = []
-  egress_rules              = ["all-all"]
+  egress_rules             = ["all-all"]
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-sg-lambda" })
 }
@@ -23,7 +23,7 @@ module "ecs_selenium_sg" {
   vpc_id      = module.vpc.vpc_id
 
   ingress_with_cidr_blocks = []
-  egress_rules              = ["all-all"]
+  egress_rules             = ["all-all"]
 
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-sg-ecs-selenium" })
 }

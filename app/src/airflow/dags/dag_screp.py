@@ -9,19 +9,21 @@ from airflow.providers.databricks.operators.databricks import DatabricksRunNowOp
 from airflow.sensors.python import PythonSensor
 from airflow.utils.trigger_rule import TriggerRule
 
-ENV = Variable.get("env", default_var="dev")
-PROJECT = "data-master"
-REGION = "us-east-2"
+ENV = Variable.get("env", default_var=Variable.get("environment", default_var="dev"))
+PROJECT = Variable.get("project", default_var="data-master")
+REGION = Variable.get("aws_region", default_var="us-east-2")
 AWS_CONN_ID = "aws_default"
 
-CLUSTER_NAME = f"{PROJECT}-{ENV}-cluster"
-SERVICE_NAME = f"{PROJECT}-{ENV}-selenium-svc"
-LAMBDA_NAME = f"{PROJECT}-{ENV}-screp"
+CLUSTER_NAME = Variable.get("ecs_cluster", default_var=f"{PROJECT}-{ENV}-cluster")
+SERVICE_NAME = Variable.get("ecs_service", default_var=f"{PROJECT}-{ENV}-selenium-svc")
+LAMBDA_NAME = Variable.get("lambda_screp", default_var=f"{PROJECT}-{ENV}-screp")
 
 default_args = {
     "owner": "airflow",
     "retries": 1,
     "retry_delay": timedelta(minutes=5),
+    "email": Variable.get("notification_emails", default_var="lucas_san20@hotmail.com").split(","),
+    "email_on_failure": True,
 }
 
 def get_dat_ref_carga():
@@ -30,11 +32,12 @@ def get_dat_ref_carga():
     Se a variável 'dat_ref_carga' estiver vazia, usa a data atual.
     Formato de saída: YYYY-MM-DD
     """
-    if Variable.get('dat_ref_carga').strip() == "":
+    value = Variable.get('dat_ref_carga', default_var='').strip()
+    if value == "":
         dat_ref_carga = datetime.now()
         dat_ref_carga = dat_ref_carga.strftime("%Y%m%d")
     else:    
-        dat_ref_carga = Variable.get('dat_ref_carga')
+        dat_ref_carga = value
     
     return dat_ref_carga
 

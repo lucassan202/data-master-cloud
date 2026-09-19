@@ -1,0 +1,92 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/airflow-bootstrap.log) 2>&1
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get install -y python3 python3-venv python3-dev python3-pip build-essential libpq-dev postgresql-client curl unzip cron sudo
+curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
+rm -rf /tmp/awscliv2.zip /tmp/aws
+useradd --system --create-home --shell /bin/bash airflow || true
+mkdir -p /home/airflow/airflow/{dags,logs,plugins} /opt/airflow
+python3 -m venv /opt/airflow/venv
+/opt/airflow/venv/bin/pip install --upgrade pip wheel setuptools
+/opt/airflow/venv/bin/pip install "apache-airflow[amazon,postgres,databricks]==2.10.4" apache-airflow-providers-amazon apache-airflow-providers-databricks --constraint https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.10.txt
+CFG_PASSWORD=$(/opt/airflow/venv/bin/python3 -c "import urllib.parse; print(urllib.parse.quote('''${db_password}''', safe=''))")
+cat > /home/airflow/airflow/airflow.cfg <<CFG
+[core]
+dags_folder = /home/airflow/airflow/dags
+executor = LocalExecutor
+load_examples = False
+default_timezone = UTC
+[database]
+sql_alchemy_conn = postgresql+psycopg2://${db_user}:$CFG_PASSWORD@${db_host}:${db_port}/${db_name}
+[webserver]
+web_server_port = 8080
+expose_config = False
+[logging]
+base_log_folder = /home/airflow/airflow/logs
+CFG
+chown -R airflow:airflow /home/airflow/airflow /opt/airflow
+mkdir -p /etc/airflow
+# Os valores são codificados no template para preservar caracteres especiais
+# e evitar que os secrets sejam interpretados pelo shell durante o bootstrap.
+: > /etc/airflow/airflow.env
+write_airflow_env() {
+  local variable_name="$1"
+  local encoded_value="$2"
+  local variable_value
+  variable_value="$(printf '%s' "$encoded_value" | base64 --decode)"
+  variable_value="$${variable_value//\\/\\\\}"
+  variable_value="$${variable_value//\"/\\\"}"
+  printf '%s="%s"\n' "$variable_name" "$variable_value" >> /etc/airflow/airflow.env
+}
+write_airflow_env AIRFLOW_ADMIN_USERNAME '${base64encode(airflow_admin_username)}'
+write_airflow_env AIRFLOW_ADMIN_PASSWORD '${base64encode(airflow_admin_password)}'
+write_airflow_env AIRFLOW_ADMIN_EMAIL '${base64encode(airflow_admin_email)}'
+write_airflow_env AIRFLOW__SMTP__SMTP_HOST '${base64encode(airflow_smtp_host)}'
+write_airflow_env AIRFLOW__SMTP__SMTP_PORT '${base64encode(airflow_smtp_port)}'
+write_airflow_env AIRFLOW__SMTP__SMTP_USER '${base64encode(airflow_smtp_user)}'
+write_airflow_env AIRFLOW__SMTP__SMTP_PASSWORD '${base64encode(airflow_smtp_password)}'
+write_airflow_env AIRFLOW__SMTP__SMTP_MAIL_FROM '${base64encode(airflow_smtp_mail_from)}'
+write_airflow_env AIRFLOW__SMTP__SMTP_STARTTLS '${base64encode(airflow_smtp_starttls)}'
+write_airflow_env AIRFLOW__SMTP__SMTP_SSL '${base64encode(airflow_smtp_ssl)}'
+write_airflow_env AIRFLOW_NOTIFICATION_EMAILS '${base64encode(airflow_notification_emails)}'
+chmod 600 /etc/airflow/airflow.env
+airflow_admin_username_value="$(printf '%s' '${base64encode(airflow_admin_username)}' | base64 --decode)"
+airflow_admin_password_value="$(printf '%s' '${base64encode(airflow_admin_password)}' | base64 --decode)"
+airflow_admin_email_value="$(printf '%s' '${base64encode(airflow_admin_email)}' | base64 --decode)"
+airflow_notification_emails_value="$(printf '%s' '${base64encode(airflow_notification_emails)}' | base64 --decode)"
+for i in $(seq 1 40); do pg_isready -h '${db_host}' -p '${db_port}' -U '${db_user}' -d '${db_name}' && break || sleep 15; done
+sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow db migrate
+sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow users create --username "$airflow_admin_username_value" --firstname Admin --lastname User --role Admin --email "$airflow_admin_email_value" --password "$airflow_admin_password_value" || true
+sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow variables set notification_emails "$airflow_notification_emails_value"
+cat > /usr/local/bin/airflow-sync-dags.sh <<SYNC
+#!/bin/bash
+set -euo pipefail
+/usr/local/bin/aws s3 sync '${s3_dags_path}' /home/airflow/airflow/dags/ --region '${aws_region}' --delete
+chown -R airflow:airflow /home/airflow/airflow/dags
+SYNC
+chmod 755 /usr/local/bin/airflow-sync-dags.sh
+/usr/local/bin/airflow-sync-dags.sh || true
+echo '* * * * * root /usr/local/bin/airflow-sync-dags.sh' > /etc/cron.d/airflow-dags-sync
+chmod 644 /etc/cron.d/airflow-dags-sync
+systemctl enable --now cron
+for service in webserver scheduler; do
+  cat > /etc/systemd/system/airflow-$service.service <<UNIT
+[Unit]
+Description=Airflow $service
+After=network.target
+[Service]
+User=airflow
+Group=airflow
+Environment=AIRFLOW_HOME=/home/airflow/airflow
+EnvironmentFile=-/etc/airflow/airflow.env
+ExecStart=/opt/airflow/venv/bin/airflow $service
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+UNIT
+done
+systemctl daemon-reload
+systemctl enable --now airflow-webserver airflow-scheduler

@@ -66,10 +66,17 @@ class Silver:
                 (col("nomefantasia").like("Banco%")) & (col("area") == "Serviços Financeiros")
             )
 
-            spark.sql(f"DELETE FROM s_consumidor.consumidorservicosfinanceiros WHERE datRefCarga = '{datRefCarga}'")
-            log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
+            if consumidor.limit(1).count() == 0:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
 
-            consumidor.write.mode("append").insertInto("s_consumidor.consumidorservicosfinanceiros")
+            (
+                consumidor.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datRefCarga = '{datRefCarga}'")
+                .saveAsTable("s_consumidor.consumidorservicosfinanceiros")
+            )
             log.info("Silver — job finalizado com sucesso")
 
         except Exception as e:
