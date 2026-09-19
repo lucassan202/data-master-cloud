@@ -181,12 +181,15 @@ resource "aws_instance" "airflow" {
     delete_on_termination = true
   }
   user_data = templatefile("${path.module}/airflow_user_data.sh.tftpl", {
-    db_host                     = aws_db_instance.airflow[0].address, db_port = aws_db_instance.airflow[0].port,
-    db_name                     = aws_db_instance.airflow[0].db_name, db_user = aws_db_instance.airflow[0].username,
-    db_password                 = random_password.airflow_db[0].result, s3_dags_path = local.airflow_dags_path,
-    aws_region                  = var.awslogs_region, airflow_admin_username = var.airflow_admin_username,
-    airflow_admin_password      = var.airflow_admin_password, airflow_admin_email = var.airflow_admin_email,
-    airflow_notification_emails = join(",", var.notification_emails)
+    db_host                = aws_db_instance.airflow[0].address, db_port = aws_db_instance.airflow[0].port,
+    db_name                = aws_db_instance.airflow[0].db_name, db_user = aws_db_instance.airflow[0].username,
+    db_password            = random_password.airflow_db[0].result, s3_dags_path = local.airflow_dags_path,
+    aws_region             = var.awslogs_region, airflow_admin_username = var.airflow_admin_username,
+    airflow_admin_password = var.airflow_admin_password, airflow_admin_email = var.airflow_admin_email,
+    airflow_smtp_host      = var.airflow_smtp_host, airflow_smtp_port = var.airflow_smtp_port,
+    airflow_smtp_user      = var.airflow_smtp_user, airflow_smtp_password = var.airflow_smtp_password,
+    airflow_smtp_mail_from = var.airflow_smtp_mail_from, airflow_smtp_starttls = var.airflow_smtp_starttls,
+    airflow_smtp_ssl       = var.airflow_smtp_ssl, airflow_notification_emails = var.airflow_notification_emails
   })
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-airflow" })
 }

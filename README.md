@@ -29,157 +29,47 @@ cd data-master-cloud
 
 ---
 
-### 2. Configure as variáveis de infraestrutura
+### 2. Configure as variáveis e suba o ambiente
 
-Edite o arquivo `IaC/terraform.tfvars` com os valores do seu ambiente:
-
-```hcl
-project     = "data-master"
-environment = "dev"
-aws_region  = "us-east-2"
-```
-
-Variáveis sensíveis (Databricks) devem ser configuradas como **secrets no GitHub Actions** ou exportadas como variáveis de ambiente locais:
-
-```bash
-export TF_VAR_databricks_host="https://<workspace>.azuredatabricks.net"
-export TF_VAR_databricks_client_id="<client-id>"
-export TF_VAR_databricks_client_secret="<client-secret>"
-```
-
-Para executar o Airflow localmente, copie o arquivo de exemplo e preencha as
-configurações SMTP no arquivo local:
+Copie o arquivo de exemplo, preencha as variáveis necessárias e mantenha o
+arquivo `.env` apenas localmente, pois ele pode conter credenciais:
 
 ```bash
 cp .env.example .env
 ```
 
-Configure no `.env` as variáveis `AIRFLOW__SMTP__SMTP_HOST`,
-`AIRFLOW__SMTP__SMTP_PORT`, `AIRFLOW__SMTP__SMTP_USER`,
-`AIRFLOW__SMTP__SMTP_PASSWORD`, `AIRFLOW__SMTP__SMTP_MAIL_FROM` e as opções
-`AIRFLOW__SMTP__SMTP_STARTTLS`/`AIRFLOW__SMTP__SMTP_SSL`. Os destinatários das
-DAGs podem ser definidos em `AIRFLOW_NOTIFICATION_EMAILS`, separados por
-vírgulas. O arquivo `.env` pode conter credenciais e não deve ser versionado;
-use apenas placeholders no `.env.example`.
+Preencha as variáveis de acordo com o uso desejado:
 
-No Airflow provisionado pela EC2, as mesmas variáveis devem ser fornecidas pelo
-secret manager no arquivo `/etc/airflow/airflow.env`. O `.env` local é usado
-somente pelo Docker Compose.
+| Grupo | Variáveis | Observação |
+|---|---|---|
+| Airflow | `AIRFLOW_ADMIN_USERNAME`, `AIRFLOW_ADMIN_PASSWORD`, `AIRFLOW_ADMIN_EMAIL` | Credenciais do usuário administrador local. |
+| SMTP obrigatório | `AIRFLOW__SMTP__SMTP_HOST`, `AIRFLOW__SMTP__SMTP_PORT`, `AIRFLOW__SMTP__SMTP_MAIL_FROM` | Necessárias para inicializar o Airflow local. |
+| SMTP opcional | `AIRFLOW__SMTP__SMTP_USER`, `AIRFLOW__SMTP__SMTP_PASSWORD`, `AIRFLOW__SMTP__SMTP_STARTTLS`, `AIRFLOW__SMTP__SMTP_SSL` | Preencha conforme o servidor SMTP. |
+| Notificações | `AIRFLOW_NOTIFICATION_EMAILS` | E-mails separados por vírgula. |
+| AWS | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | As credenciais podem ser omitidas quando a AWS CLI usa profile, role ou outro mecanismo padrão. |
+| Databricks | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` | Necessárias para a execução local das DAGs e jobs que acessam o Databricks. |
+| Jobs | `AIRFLOW_ENV`, `DAT_REF_CARGA`, `DAT_REF_CARGA_M`, `PROJECT`, `ECS_CLUSTER`, `ECS_SERVICE`, `LAMBDA_SCREP`, `LAMBDA_DOWNLOAD` | Parâmetros dos jobs; os valores do arquivo de exemplo atendem ao ambiente local padrão. |
+| Terraform remoto | `TF_STATE_BUCKET`, `TF_LOCK_TABLE` | Opcionais. Sem `TF_STATE_BUCKET`, o Terraform usa state local. `TF_LOCK_TABLE` só é usada quando o backend S3 está configurado. |
 
-Os destinatários de alertas e o principal dos GRANTs são configuráveis no
-`IaC/jobs.auto.tfvars` pelas variáveis `notification_emails` e
-`databricks_grant_principal`. Na ausência de configuração, ambas usam
-`lucas_san20@hotmail.com`.
-
-O Airflow envia alertas de falha das DAGs via SMTP. Antes de iniciar os
-serviços, o arquivo `/etc/airflow/airflow.env` deve ser preenchido pelo
-mecanismo de secrets do ambiente com as variáveis `AIRFLOW__SMTP__SMTP_HOST`,
-`AIRFLOW__SMTP__SMTP_PORT`, `AIRFLOW__SMTP__SMTP_USER`,
-`AIRFLOW__SMTP__SMTP_PASSWORD`, `AIRFLOW__SMTP__SMTP_MAIL_FROM` e,
-quando aplicável, `AIRFLOW__SMTP__SMTP_STARTTLS`/`AIRFLOW__SMTP__SMTP_SSL`.
-
----
-
-### 3. Inicialize o Terraform
-
-O state dos buckets S3 é separado do state da aplicação. O `make build-all` inicializa e aplica os dois states automaticamente.
-
-Para inicialização manual dos buckets:
-
-```bash
-terraform -chdir=IaC/buckets init \
-  -backend-config="bucket=<bucket-do-estado>" \
-  -backend-config="key=data-master-cloud-buckets" \
-  -backend-config="region=us-east-2" \
-  -backend-config="dynamodb_table=<tabela-de-lock>"
-terraform -chdir=IaC/buckets workspace select dev
-terraform -chdir=IaC/buckets plan \
-  -var="env=dev" \
-  -var="aws_region=us-east-2"
-```
-
-Para a infraestrutura da aplicação:
-
-```bash
-terraform -chdir=IaC init \
-  -backend-config="bucket=<bucket-do-estado>" \
-  -backend-config="key=data-master-cloud" \
-  -backend-config="region=us-east-2" \
-  -backend-config="dynamodb_table=<tabela-de-lock>"
-```
-
-Para ambientes distintos, use workspaces:
-
-```bash
-terraform -chdir=IaC workspace new dev
-terraform -chdir=IaC workspace select dev
-```
-
-### 4. Configure o Airflow local
-
-Para subir o Airflow localmente, copie o arquivo de exemplo e preencha as credenciais:
-
-```bash
-cp .env.example .env
-```
-
-### 5. Prepare e suba o ambiente
-
-O comando abaixo empacota as Lambdas, publica os pacotes no S3, aplica a infraestrutura Terraform e sobe o Airflow via Docker Compose:
-
-Opcionalmente, visualize antes as mudanças que serão aplicadas:
-
-```bash
-terraform -chdir=IaC plan \
-  -var="env=dev" \
-  -var="environment=dev"
-```
-
-Para outro ambiente, substitua `dev` pelo valor desejado.
+O state remoto S3 é recomendado para ambientes compartilhados. Para uso local,
+deixe `TF_STATE_BUCKET` e `TF_LOCK_TABLE` vazias. Não alterne entre state local
+e remoto sem migrar o state Terraform conscientemente.
 
 ```bash
 make build-all
 ```
 
-O ambiente padrão é `dev`, a região padrão é `us-east-2` e o bucket dos pacotes é `dev-us-east-2-data-master`. Esses valores podem ser sobrescritos:
+O comando prepara os pacotes das Lambdas, provisiona a infraestrutura,
+configura o bucket e inicia os serviços locais. Por padrão, usa o ambiente
+`dev` e a região `us-east-2`.
+
+Para sobrescrever esses valores:
 
 ```bash
-make build-all ENVIRONMENT=pro AWS_REGION=us-east-2 S3_BUCKET=pro-us-east-2-data-master ...
+make build-all ENVIRONMENT=pro AWS_REGION=us-east-2
 ```
 
-O comando cria `lambda_function.zip` (downloader CSV) e `selenium_layer.zip` (layer do Selenium), copiando-os para `s3://<bucket>/tmp/` antes do `terraform apply`.
-
-> O `build-all` executa `terraform apply -auto-approve` e pode criar recursos e custos na AWS. Verifique as variáveis `TF_VAR_*` e as credenciais AWS antes de executá-lo.
-
-O backend Terraform precisa estar inicializado previamente com `terraform init`, conforme o passo anterior.
-
-Comandos úteis do Airflow:
-
-O serviço `airflow-init` inicializa o banco, cria o usuário administrador, as conexões `aws_default` e `databricks_default` e as variáveis das DAGs. Acesse http://localhost:8080 usando as credenciais definidas em `.env`.
-
-Comandos úteis:
-
-```bash
-docker compose logs -f airflow-init
-docker compose logs -f airflow-scheduler
-docker compose restart
-docker compose down
-```
-
-Este Compose é destinado ao desenvolvimento (`dev`). Em produção, o Airflow continua sendo provisionado pela infraestrutura Terraform em EC2, com PostgreSQL em RDS.
-
----
-
-### 6. Terraform manual
-
-```bash
-# Aplique
-terraform -chdir=IaC apply
-```
-
----
-
-### 7. CI/CD via GitHub Actions
+### CI/CD via GitHub Actions
 
 O deploy automatizado é ativado por push na branch:
 
@@ -194,6 +84,25 @@ O workflow reusável está em [.github/workflows/terraform.yml](.github/workflow
 3. Executa `terraform init / plan / apply`
 
 > Para destruir a infraestrutura, defina `"destroy": true` em `IaC/destroy_config.json` e abra um PR.
+
+### Destruir os recursos localmente
+
+Para destruir automaticamente os recursos da aplicação gerenciados pelo Terraform:
+
+```bash
+make terraform-destroy
+```
+
+O comando não pede confirmação. Para destruir outro ambiente ou usar outra região:
+
+```bash
+make terraform-destroy ENVIRONMENT=pro AWS_REGION=us-east-2
+```
+
+Esse alvo destrói somente os recursos da aplicação em `IaC`. Os buckets de
+bootstrap e de state gerenciados em `IaC/buckets` não são destruídos. Se estiver
+usando state remoto, configure `TF_STATE_BUCKET` e `TF_LOCK_TABLE` no `.env` para
+que o comando opere sobre o mesmo backend e workspace usados no deploy.
 
 ### Airflow
 

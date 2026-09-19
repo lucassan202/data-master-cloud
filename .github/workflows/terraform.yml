@@ -25,12 +25,21 @@ on:
         required: true
       DATABRICKS_CLIENT_SECRET:
         required: true  
+      TF_STATE_BUCKET:
+        required: false
+      TF_LOCK_TABLE:
+        required: false
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     env:      
+      ENVIRONMENT: ${{ inputs.environment }}
+      AWS_REGION: ${{ inputs.aws-region }}
+      TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET || inputs.aws-statefile-s3-bucket }}
+      TF_LOCK_TABLE: ${{ secrets.TF_LOCK_TABLE || inputs.aws-lock-dynamodb-table }}
+      S3_BUCKET: ${{ inputs.environment }}-${{ inputs.aws-region }}-data-master
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID  }}
       DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET  }}      
@@ -80,29 +89,29 @@ jobs:
         run: |
           cd IaC/buckets
           terraform init -reconfigure \
-            -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
             -backend-config="key=data-master-cloud-buckets" \
-            -backend-config="region=${{ inputs.aws-region }}" \
-            -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+            -backend-config="region=$AWS_REGION" \
+            -backend-config="dynamodb_table=$TF_LOCK_TABLE"
+          terraform workspace select "$ENVIRONMENT" || terraform workspace new "$ENVIRONMENT"
           terraform apply -auto-approve \
-            -var="env=${{ inputs.environment }}" \
-            -var="aws_region=${{ inputs.aws-region }}"
+            -var="env=$ENVIRONMENT" \
+            -var="aws_region=$AWS_REGION"
 
       - name: Upload Lambda to S3
         if: steps.read-destroy-config.outputs.destroy != 'true'
         run: |
-          aws s3 cp lambda_function.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/lambda_function.zip
-          aws s3 cp selenium_layer.zip s3://${{ inputs.environment }}-us-east-2-data-master/tmp/selenium_layer.zip
+          aws s3 cp lambda_function.zip "s3://$S3_BUCKET/tmp/lambda_function.zip" --region "$AWS_REGION"
+          aws s3 cp selenium_layer.zip "s3://$S3_BUCKET/tmp/selenium_layer.zip" --region "$AWS_REGION"
 
       - name: Terraform Init Application State
         run: |
           cd IaC && terraform init \
             -reconfigure \
-            -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
             -backend-config="key=data-master-cloud" \
-            -backend-config="region=${{ inputs.aws-region }}" \
-            -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
+            -backend-config="region=$AWS_REGION" \
+            -backend-config="dynamodb_table=$TF_LOCK_TABLE"
       
       - name: Terraform Validate
         run: terraform -chdir=IaC validate
@@ -112,26 +121,26 @@ jobs:
         id: terraform-destroy
         run: |
           cd IaC
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform workspace select "$ENVIRONMENT" || terraform workspace new "$ENVIRONMENT"
           terraform destroy -auto-approve \
-            -var="env=${{ inputs.environment }}" \
-            -var="environment=${{ inputs.environment }}"
+            -var="env=$ENVIRONMENT" \
+            -var="environment=$ENVIRONMENT"
       
       - name: Terraform Plan
         if: steps.read-destroy-config.outputs.destroy != 'true'
         id: terraform-plan
         run: |
           cd IaC
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
+          terraform workspace select "$ENVIRONMENT" || terraform workspace new "$ENVIRONMENT"
           terraform plan \
-            -var="env=${{ inputs.environment }}" \
-            -var="environment=${{ inputs.environment }}" \
-            -out="${{ inputs.environment }}.plan"
+            -var="env=$ENVIRONMENT" \
+            -var="environment=$ENVIRONMENT" \
+            -out="$ENVIRONMENT.plan"
 
       - name: Terraform Apply
         if: steps.read-destroy-config.outputs.destroy != 'true'
         id: terraform-apply      
         run: |
           cd IaC
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
-          terraform apply "${{ inputs.environment }}.plan"
+          terraform workspace select "$ENVIRONMENT" || terraform workspace new "$ENVIRONMENT"
+          terraform apply "$ENVIRONMENT.plan"

@@ -175,6 +175,55 @@ variable "airflow_admin_email" {
   default     = "admin@example.com"
 }
 
+variable "airflow_smtp_host" {
+  description = "Host SMTP usado pelo Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_port" {
+  description = "Porta SMTP usada pelo Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_user" {
+  description = "Usuário SMTP usado pelo Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_password" {
+  description = "Senha SMTP usada pelo Airflow"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "airflow_smtp_mail_from" {
+  description = "Endereço remetente SMTP do Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_starttls" {
+  description = "Indica se o Airflow deve habilitar STARTTLS"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_ssl" {
+  description = "Indica se o Airflow deve habilitar SSL SMTP"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_notification_emails" {
+  description = "Destinatários das notificações do Airflow separados por vírgula"
+  type        = string
+  default     = ""
+}
+
 variable "airflow_ssh_cidr_blocks" {
   description = "CIDRs autorizados a acessar SSH e a UI do Airflow"
   type        = list(string)
