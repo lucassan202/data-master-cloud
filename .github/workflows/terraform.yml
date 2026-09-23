@@ -149,6 +149,24 @@ jobs:
       - name: Terraform Validate
         run: terraform -chdir=IaC validate
 
+      - name: Adopt existing Lambda log group
+        if: steps.read-destroy-config.outputs.destroy != 'true'
+        run: |
+          cd IaC
+          terraform workspace select "$ENVIRONMENT" || terraform workspace new "$ENVIRONMENT"
+
+          LOG_GROUP_NAME="/aws/lambda/download-csv-consumer-${ENVIRONMENT}"
+
+          # Lambda may have created the group before Terraform managed it.
+          if ! terraform state show aws_cloudwatch_log_group.lambda_download >/dev/null 2>&1 \
+            && aws logs describe-log-groups \
+              --log-group-name-prefix "$LOG_GROUP_NAME" \
+              --query "logGroups[?logGroupName=='${LOG_GROUP_NAME}'].logGroupName | [0]" \
+              --output text | grep -Fxq "$LOG_GROUP_NAME"; then
+            terraform import -input=false \
+              aws_cloudwatch_log_group.lambda_download "$LOG_GROUP_NAME"
+          fi
+
       - name: Terraform Destroy
         if: steps.read-destroy-config.outputs.destroy == 'true'
         id: terraform-destroy
