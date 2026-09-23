@@ -127,6 +127,153 @@ resource "databricks_job" "bronze_screp_job" {
   }
 }
 
+resource "databricks_job" "kaggle_backfill_bronze_job" {
+
+  name = "Kaggle Backfill Bronze Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "kaggle_backfill_bronze_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.bronze_kaggle_historico_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+        "env"         = var.environment
+        "s3_key"      = "screp/historico/kaggle/dados2025.json"
+      }
+    }
+  }
+
+  email_notifications {
+    on_failure = var.notification_emails
+  }
+}
+
+resource "databricks_job" "kaggle_backfill_silver_ai_job" {
+
+  name = "Kaggle Backfill Silver AI Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "kaggle_backfill_silver_ai_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.silver_ai_classificacao_relatos_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+        "llm_model"   = "databricks-qwen3-next-80b-a3b-instruct"
+        "modo"        = "historico"
+      }
+    }
+  }
+
+  email_notifications {
+    on_failure = var.notification_emails
+  }
+}
+
+resource "databricks_job" "kaggle_backfill_status_gold_job" {
+
+  name = "Kaggle Backfill Status Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "kaggle_backfill_status_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.status_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+        "modo"        = "historico"
+      }
+    }
+  }
+
+  email_notifications {
+    on_failure = var.notification_emails
+  }
+}
+
+resource "databricks_job" "kaggle_backfill_nota_gold_job" {
+
+  name = "Kaggle Backfill Nota Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "kaggle_backfill_nota_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.nota_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+        "modo"        = "historico"
+      }
+    }
+  }
+
+  email_notifications {
+    on_failure = var.notification_emails
+  }
+}
+
+resource "databricks_job" "kaggle_backfill_macro_gold_job" {
+
+  name = "Kaggle Backfill Macro Gold Job"
+
+  environment {
+    environment_key = var.environment_key
+
+    spec {
+      environment_version = var.environment_version
+    }
+  }
+
+  task {
+    task_key = "kaggle_backfill_macro_gold_task"
+
+    notebook_task {
+      notebook_path = databricks_notebook.macro_categoria_ai_gold_notebook.path
+      base_parameters = {
+        "datRefCarga" = var.datrefcarga
+        "modo"        = "historico"
+      }
+    }
+  }
+
+  email_notifications {
+    on_failure = var.notification_emails
+  }
+}
+
 output "bronze_screp_job_url" {
   value = databricks_job.bronze_screp_job.url
 }

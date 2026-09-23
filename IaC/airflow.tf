@@ -189,7 +189,8 @@ resource "aws_instance" "airflow" {
     airflow_smtp_host      = var.airflow_smtp_host, airflow_smtp_port = var.airflow_smtp_port,
     airflow_smtp_user      = var.airflow_smtp_user, airflow_smtp_password = var.airflow_smtp_password,
     airflow_smtp_mail_from = var.airflow_smtp_mail_from, airflow_smtp_starttls = var.airflow_smtp_starttls,
-    airflow_smtp_ssl       = var.airflow_smtp_ssl, airflow_notification_emails = var.airflow_notification_emails
+    airflow_smtp_ssl       = var.airflow_smtp_ssl, airflow_notification_emails = var.airflow_notification_emails,
+    airflow_kaggle_backfill_mes = var.airflow_kaggle_backfill_mes
   })
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-airflow" })
 }

@@ -18,10 +18,16 @@ logger = logging.getLogger("CreateConsumerTables")
 # Obter parâmetro de ambiente
 dbutils.widgets.text("env", "")  # noqa: F821
 env = dbutils.widgets.get("env")
-dbutils.widgets.text("databricks_grant_principal", "")  # noqa: F821
+default_grant_principal = "lucas_san20@hotmail.com"
+dbutils.widgets.text("databricks_grant_principal", default_grant_principal)  # noqa: F821
 grant_principal = dbutils.widgets.get("databricks_grant_principal").strip()
 if not grant_principal:
-    raise ValueError("O parâmetro 'databricks_grant_principal' é obrigatório")
+    grant_principal = default_grant_principal
+    logger.warning(
+        "O parâmetro 'databricks_grant_principal' não foi preenchido; "
+        "utilizando o valor padrão %s",
+        default_grant_principal,
+    )
 
 logger.info(f"Iniciando criação das tabelas - Ambiente: {env}")
 
@@ -289,6 +295,62 @@ def create_silver_ai_classificacao_relatos_table() -> bool:
         return False
 
 
+def create_historical_backfill_tables() -> bool:
+    """Cria as tabelas isoladas do backfill histórico Kaggle."""
+    try:
+        if not create_database("b_consumidor") or not create_database("s_consumidor"):
+            return False
+        create_database("g_consumidor")
+
+        definitions = {
+            "b_consumidor.consumidor_historico": (
+                "data/b_consumidor/consumidor_historico",
+                """
+                nomeempresa string, status string, temporesposta string,
+                dataocorrido string, cidade string, uf string, relato string,
+                resposta string, nota string, comentario string,
+                datrefcarga string, fonte string, source_record_id bigint
+                """,
+            ),
+            "s_consumidor.ai_classificacao_relatos_historico": (
+                "data/s_consumidor/ai_classificacao_relatos_historico",
+                """
+                nomeempresa string, status string, temporesposta string,
+                dataocorrido string, cidade string, uf string, relato string,
+                resposta string, nota string, comentario string,
+                datrefcarga string, fonte string, source_record_id bigint,
+                macro_categoria string, categoria string, subcategoria string,
+                canal string, prioridade string, sla_dias string,
+                resposta_sugerida string, resposta_final string
+                """,
+            ),
+            "g_consumidor.ai_status_historico": (
+                "data/g_consumidor/ai_status_historico",
+                "status string, dataocorrido string, datrefcarga string, qtd bigint",
+            ),
+            "g_consumidor.ai_nota_historico": (
+                "data/g_consumidor/ai_nota_historico",
+                "nota string, dataocorrido string, datrefcarga string, qtd bigint",
+            ),
+            "g_consumidor.ai_macro_categoria_historico": (
+                "data/g_consumidor/ai_macro_categoria_historico",
+                "macro_categoria string, dataocorrido string, datrefcarga string, qtd bigint",
+            ),
+        }
+
+        for table_name, (location_suffix, columns) in definitions.items():
+            database, short_name = table_name.split(".")
+            location = get_location(location_suffix)
+            spark.sql(  # noqa: F821
+                f"""CREATE EXTERNAL TABLE IF NOT EXISTS {database}.{short_name}(
+                {columns}) LOCATION '{location}'"""
+            )
+        return True
+    except Exception as error:
+        logger.error(f"Erro ao criar tabelas históricas: {error}")
+        return False
+
+
 def create_gold_tables() -> bool:
     """
     Cria tabelas Gold - g_consumidor (5 tabelas)
@@ -369,6 +431,7 @@ def main():
         "Bronze": False,
         "Silver": False,
         "SilverAiClassificacaoRelatos": False,
+        "HistoricalBackfill": False,
         "Gold": False
     }
     
@@ -388,6 +451,9 @@ def main():
     logger.info("--- Fase 2b: Criando tabela Silver AI Classificação Relatos ---")
     results["SilverAiClassificacaoRelatos"] = create_silver_ai_classificacao_relatos_table()
 
+    logger.info("--- Fase 2c: Criando tabelas do backfill histórico ---")
+    results["HistoricalBackfill"] = create_historical_backfill_tables()
+
     # Executa criação das tabelas Gold
     logger.info("--- Fase 3: Criando tabelas Gold ---")
     results["Gold"] = create_gold_tables()
@@ -399,6 +465,7 @@ def main():
     logger.info(f"  Bronze: {'SUCESSO' if results['Bronze'] else 'FALHA'}")
     logger.info(f"  Silver: {'SUCESSO' if results['Silver'] else 'FALHA'}")
     logger.info(f"  SilverAiClassificacaoRelatos: {'SUCESSO' if results['SilverAiClassificacaoRelatos'] else 'FALHA'}")
+    logger.info(f"  HistoricalBackfill: {'SUCESSO' if results['HistoricalBackfill'] else 'FALHA'}")
     logger.info(f"  Gold:   {'SUCESSO' if results['Gold'] else 'FALHA'}")
     logger.info("=" * 60)
     

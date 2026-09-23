@@ -24,6 +24,7 @@ for variable_name in "${required_smtp_vars[@]}"; do
 done
 
 AIRFLOW_NOTIFICATION_EMAILS="${AIRFLOW_NOTIFICATION_EMAILS:-lucas_san20@hotmail.com}"
+KAGGLE_BACKFILL_MES="${KAGGLE_BACKFILL_MES:-2022-07}"
 
 "$AIRFLOW_BIN" db migrate
 "$AIRFLOW_BIN" users create --username "$AIRFLOW_ADMIN_USERNAME" --firstname Admin --lastname User \
@@ -63,6 +64,7 @@ values = {
     "env": env, "environment": env,
     "dat_ref_carga": os.environ.get("DAT_REF_CARGA", ""),
     "dat_ref_carga_m": os.environ.get("DAT_REF_CARGA_M", ""),
+    "kaggle_backfill_mes": os.environ.get("KAGGLE_BACKFILL_MES", "2022-07"),
     "aws_region": os.environ.get("AWS_REGION", "us-east-2"),
     "project": os.environ.get("PROJECT", "data-master"),
     "ecs_cluster": os.environ.get("ECS_CLUSTER", f"data-master-{env}-cluster"),
@@ -72,7 +74,12 @@ values = {
     "notification_emails": os.environ.get("AIRFLOW_NOTIFICATION_EMAILS", "lucas_san20@hotmail.com"),
 }
 for key, value in values.items():
-    Variable.set(key, value)
+    if key == "kaggle_backfill_mes":
+        current = session.query(Variable).filter(Variable.key == key).one_or_none()
+        if current is None:
+            Variable.set(key, value)
+    else:
+        Variable.set(key, value)
 session.commit()
 session.close()
 PY

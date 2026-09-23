@@ -224,6 +224,16 @@ variable "airflow_notification_emails" {
   default     = ""
 }
 
+variable "airflow_kaggle_backfill_mes" {
+  description = "Mês inicial ou atual do backfill histórico Kaggle no formato YYYY-MM"
+  type        = string
+  default     = "2022-07"
+  validation {
+    condition     = can(regex("^(DONE|[0-9]{4}-(0[1-9]|1[0-2]))$", var.airflow_kaggle_backfill_mes))
+    error_message = "airflow_kaggle_backfill_mes deve estar no formato YYYY-MM ou DONE."
+  }
+}
+
 variable "airflow_ssh_cidr_blocks" {
   description = "CIDRs autorizados a acessar SSH e a UI do Airflow"
   type        = list(string)

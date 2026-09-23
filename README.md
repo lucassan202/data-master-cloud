@@ -48,7 +48,7 @@ Preencha as variáveis de acordo com o uso desejado:
 | Notificações | `AIRFLOW_NOTIFICATION_EMAILS` | E-mails separados por vírgula. |
 | AWS | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | As credenciais podem ser omitidas quando a AWS CLI usa profile, role ou outro mecanismo padrão. |
 | Databricks | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` | Necessárias para a execução local das DAGs e jobs que acessam o Databricks. |
-| Jobs | `AIRFLOW_ENV`, `DAT_REF_CARGA`, `DAT_REF_CARGA_M`, `PROJECT`, `ECS_CLUSTER`, `ECS_SERVICE`, `LAMBDA_SCREP`, `LAMBDA_DOWNLOAD` | Parâmetros dos jobs; os valores do arquivo de exemplo atendem ao ambiente local padrão. |
+| Jobs | `AIRFLOW_ENV`, `DAT_REF_CARGA`, `DAT_REF_CARGA_M`, `KAGGLE_BACKFILL_MES`, `PROJECT`, `ECS_CLUSTER`, `ECS_SERVICE`, `LAMBDA_SCREP`, `LAMBDA_DOWNLOAD` | Parâmetros dos jobs; `KAGGLE_BACKFILL_MES` inicia o backfill histórico em `2022-07`. |
 | Terraform remoto | `TF_STATE_BUCKET`, `TF_LOCK_TABLE` | Opcionais. Sem `TF_STATE_BUCKET`, o Terraform usa state local. `TF_LOCK_TABLE` só é usada quando o backend S3 está configurado. |
 
 O state remoto S3 é recomendado para ambientes compartilhados. Para uso local,

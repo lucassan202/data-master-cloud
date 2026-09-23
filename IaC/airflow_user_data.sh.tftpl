@@ -52,15 +52,20 @@ write_airflow_env AIRFLOW__SMTP__SMTP_MAIL_FROM '${base64encode(airflow_smtp_mai
 write_airflow_env AIRFLOW__SMTP__SMTP_STARTTLS '${base64encode(airflow_smtp_starttls)}'
 write_airflow_env AIRFLOW__SMTP__SMTP_SSL '${base64encode(airflow_smtp_ssl)}'
 write_airflow_env AIRFLOW_NOTIFICATION_EMAILS '${base64encode(airflow_notification_emails)}'
+write_airflow_env KAGGLE_BACKFILL_MES '${base64encode(airflow_kaggle_backfill_mes)}'
 chmod 600 /etc/airflow/airflow.env
 airflow_admin_username_value="$(printf '%s' '${base64encode(airflow_admin_username)}' | base64 --decode)"
 airflow_admin_password_value="$(printf '%s' '${base64encode(airflow_admin_password)}' | base64 --decode)"
 airflow_admin_email_value="$(printf '%s' '${base64encode(airflow_admin_email)}' | base64 --decode)"
 airflow_notification_emails_value="$(printf '%s' '${base64encode(airflow_notification_emails)}' | base64 --decode)"
+airflow_kaggle_backfill_mes_value="$(printf '%s' '${base64encode(airflow_kaggle_backfill_mes)}' | base64 --decode)"
 for i in $(seq 1 40); do pg_isready -h '${db_host}' -p '${db_port}' -U '${db_user}' -d '${db_name}' && break || sleep 15; done
 sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow db migrate
 sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow users create --username "$airflow_admin_username_value" --firstname Admin --lastname User --role Admin --email "$airflow_admin_email_value" --password "$airflow_admin_password_value" || true
 sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow variables set notification_emails "$airflow_notification_emails_value"
+if ! sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow variables get kaggle_backfill_mes >/dev/null 2>&1; then
+  sudo -u airflow env AIRFLOW_HOME=/home/airflow/airflow /opt/airflow/venv/bin/airflow variables set kaggle_backfill_mes "$airflow_kaggle_backfill_mes_value"
+fi
 cat > /usr/local/bin/airflow-sync-dags.sh <<SYNC
 #!/bin/bash
 set -euo pipefail
