@@ -17,11 +17,12 @@ def get_dat_ref_carga():
     Se a variável 'dat_ref_carga' estiver vazia, usa a data atual - 30 dias.
     Formato de saída: YYYY-MM
     """
-    if Variable.get('dat_ref_carga_m').strip() == "":
+    value = Variable.get('dat_ref_carga_m', default_var='').strip()
+    if value == "":
         dat_ref_carga = datetime.now() - timedelta(days=30)
         dat_ref_carga = dat_ref_carga.strftime("%Y-%m")
     else:    
-        dat_ref_carga = Variable.get('dat_ref_carga_m')
+        dat_ref_carga = value
     
     return dat_ref_carga
 
@@ -31,6 +32,8 @@ default_args = {
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=1),
+    'email': Variable.get('notification_emails', default_var='lucas_san20@hotmail.com').split(','),
+    'email_on_failure': True,
 }
 
 # Definição da DAG
@@ -47,8 +50,11 @@ with DAG(
     # Task Lambda - Download dos arquivos CSV do dados.mj.gov.br para S3
     lambda_download_task = LambdaInvokeFunctionOperator(
         task_id='invoke_lambda_download_csv',
-        function_name=f'download-csv-consumer-{Variable.get("environment")}',
-        payload=json.dumps({"datRefCarga": get_dat_ref_carga(), "ENV": Variable.get('environment')}),
+        function_name=Variable.get('lambda_download', default_var=f'download-csv-consumer-{Variable.get("environment", default_var="dev")}'),
+        payload=json.dumps({"datRefCarga": get_dat_ref_carga(), "ENV": Variable.get('environment', default_var=Variable.get('env', default_var='dev'))}),
+        aws_conn_id='aws_default',
+        region_name=Variable.get('aws_region', default_var='us-east-2'),
+        retries=20,
     )
 
     # Task Bronze - Extração e carga inicial
@@ -57,7 +63,7 @@ with DAG(
         job_name='Bronze Job',
         notebook_params={
             'datRefCarga': get_dat_ref_carga(),
-            'env': Variable.get('environment')
+            'env': Variable.get('environment', default_var=Variable.get('env', default_var='dev'))
         },
         databricks_conn_id='databricks_default',
     )

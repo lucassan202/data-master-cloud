@@ -32,8 +32,8 @@ resource "aws_ecs_task_definition" "selenium" {
   network_mode             = "awsvpc"
   cpu                      = var.cpu
   memory                   = var.memory
-  execution_role_arn       = var.ecs_task_execution_role_arn
-  task_role_arn            = var.ecs_task_execution_role_arn
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([
     {
@@ -58,7 +58,7 @@ resource "aws_ecs_task_definition" "selenium" {
 
       # Selenium standalone expõe /status quando pronto
       healthCheck = {
-        command = ["CMD-SHELL", "curl -sf http://localhost:4444/status > /dev/null || exit 1"]
+        command     = ["CMD-SHELL", "curl -sf http://localhost:4444/status > /dev/null || exit 1"]
         interval    = 30
         timeout     = 10
         retries     = 5

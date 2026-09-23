@@ -18,6 +18,16 @@ logger = logging.getLogger("CreateConsumerTables")
 # Obter parâmetro de ambiente
 dbutils.widgets.text("env", "")  # noqa: F821
 env = dbutils.widgets.get("env")
+default_grant_principal = "lucas_san20@hotmail.com"
+dbutils.widgets.text("databricks_grant_principal", default_grant_principal)  # noqa: F821
+grant_principal = dbutils.widgets.get("databricks_grant_principal").strip()
+if not grant_principal:
+    grant_principal = default_grant_principal
+    logger.warning(
+        "O parâmetro 'databricks_grant_principal' não foi preenchido; "
+        "utilizando o valor padrão %s",
+        default_grant_principal,
+    )
 
 logger.info(f"Iniciando criação das tabelas - Ambiente: {env}")
 
@@ -37,10 +47,10 @@ def create_database(database_name: str) -> bool:
         spark.sql(f"CREATE DATABASE IF NOT EXISTS {database_name}")
         logger.info(f"Database {database_name} verificada/criada com sucesso")
         
-        # Grant USE_SCHEMA para o usuário lucas_san20@hotmail.com
+        # Grant USE_SCHEMA para o principal configurado
         try:
-            spark.sql(f"GRANT USE_SCHEMA ON SCHEMA {database_name} TO `lucas_san20@hotmail.com`")
-            logger.info(f"Grant USE_SCHEMA aplicado no schema {database_name} para lucas_san20@hotmail.com")
+            spark.sql(f"GRANT USE_SCHEMA ON SCHEMA {database_name} TO `{grant_principal}`")
+            logger.info(f"Grant USE_SCHEMA aplicado no schema {database_name} para {grant_principal}")
         except Exception as e:
             logger.warn(f"Grant USE_SCHEMA não aplicado no schema {database_name}: {str(e)}")
         
@@ -85,7 +95,7 @@ def create_bronze_screp_tables() -> bool:
 
         # Grant (opcional - pode falhar em alguns ambientes)
         try:
-            spark.sql("GRANT SELECT ON TABLE b_consumidor.consumidor_dia TO `lucas_san20@hotmail.com`")
+            spark.sql(f"GRANT SELECT ON TABLE b_consumidor.consumidor_dia TO `{grant_principal}`")
             logger.info("Grant aplicado na tabela bronze.consumidor_dia")
         except Exception as e:
             logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
@@ -152,7 +162,7 @@ def create_bronze_tables() -> bool:
         
         # Grant (opcional - pode falhar em alguns ambientes)
         try:
-            spark.sql("GRANT SELECT ON TABLE b_consumidor.consumidor TO `lucas_san20@hotmail.com`")
+            spark.sql(f"GRANT SELECT ON TABLE b_consumidor.consumidor TO `{grant_principal}`")
             logger.info("Grant aplicado na tabela bronze.consumidor")
         except Exception as e:
             logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
@@ -219,7 +229,7 @@ def create_silver_tables() -> bool:
         
         # Grant (opcional)
         try:
-            spark.sql("GRANT SELECT ON TABLE s_consumidor.consumidorservicosfinanceiros TO `lucas_san20@hotmail.com`")
+            spark.sql(f"GRANT SELECT ON TABLE s_consumidor.consumidorservicosfinanceiros TO `{grant_principal}`")
             logger.info("Grant aplicado na tabela silver.consumidorservicosfinanceiros")
         except Exception as e:
             logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
@@ -273,7 +283,7 @@ def create_silver_ai_classificacao_relatos_table() -> bool:
         logger.info(f"Tabela s_consumidor.ai_classificacao_relatos criada com sucesso - Location: {location}")
 
         try:
-            spark.sql("GRANT SELECT ON TABLE s_consumidor.ai_classificacao_relatos TO `lucas_san20@hotmail.com`")
+            spark.sql(f"GRANT SELECT ON TABLE s_consumidor.ai_classificacao_relatos TO `{grant_principal}`")
             logger.info("Grant aplicado na tabela s_consumidor.ai_classificacao_relatos")
         except Exception as e:
             logger.warn(f"Grant não aplicado (pode não ser necessário neste ambiente): {str(e)}")
@@ -282,6 +292,62 @@ def create_silver_ai_classificacao_relatos_table() -> bool:
 
     except Exception as e:
         logger.error(f"Erro ao criar tabela Silver AI Classificação Relatos: {str(e)}")
+        return False
+
+
+def create_historical_backfill_tables() -> bool:
+    """Cria as tabelas isoladas do backfill histórico Kaggle."""
+    try:
+        if not create_database("b_consumidor") or not create_database("s_consumidor"):
+            return False
+        create_database("g_consumidor")
+
+        definitions = {
+            "b_consumidor.consumidor_historico": (
+                "data/b_consumidor/consumidor_historico",
+                """
+                nomeempresa string, status string, temporesposta string,
+                dataocorrido string, cidade string, uf string, relato string,
+                resposta string, nota string, comentario string,
+                datrefcarga string, fonte string, source_record_id bigint
+                """,
+            ),
+            "s_consumidor.ai_classificacao_relatos_historico": (
+                "data/s_consumidor/ai_classificacao_relatos_historico",
+                """
+                nomeempresa string, status string, temporesposta string,
+                dataocorrido string, cidade string, uf string, relato string,
+                resposta string, nota string, comentario string,
+                datrefcarga string, fonte string, source_record_id bigint,
+                macro_categoria string, categoria string, subcategoria string,
+                canal string, prioridade string, sla_dias string,
+                resposta_sugerida string, resposta_final string
+                """,
+            ),
+            "g_consumidor.ai_status_historico": (
+                "data/g_consumidor/ai_status_historico",
+                "status string, dataocorrido string, datrefcarga string, qtd bigint",
+            ),
+            "g_consumidor.ai_nota_historico": (
+                "data/g_consumidor/ai_nota_historico",
+                "nota string, dataocorrido string, datrefcarga string, qtd bigint",
+            ),
+            "g_consumidor.ai_macro_categoria_historico": (
+                "data/g_consumidor/ai_macro_categoria_historico",
+                "macro_categoria string, dataocorrido string, datrefcarga string, qtd bigint",
+            ),
+        }
+
+        for table_name, (location_suffix, columns) in definitions.items():
+            database, short_name = table_name.split(".")
+            location = get_location(location_suffix)
+            spark.sql(  # noqa: F821
+                f"""CREATE EXTERNAL TABLE IF NOT EXISTS {database}.{short_name}(
+                {columns}) LOCATION '{location}'"""
+            )
+        return True
+    except Exception as error:
+        logger.error(f"Erro ao criar tabelas históricas: {error}")
         return False
 
 
@@ -336,7 +402,7 @@ def create_gold_tables() -> bool:
                 
                 # Grant (opcional)
                 try:
-                    spark.sql(f"GRANT SELECT ON TABLE g_consumidor.{table_name} TO `lucas_san20@hotmail.com`")
+                    spark.sql(f"GRANT SELECT ON TABLE g_consumidor.{table_name} TO `{grant_principal}`")
                     logger.info(f"Grant aplicado na tabela gold.{table_name}")
                 except Exception as e:
                     logger.warn(f"Grant não aplicado: {str(e)}")
@@ -365,6 +431,7 @@ def main():
         "Bronze": False,
         "Silver": False,
         "SilverAiClassificacaoRelatos": False,
+        "HistoricalBackfill": False,
         "Gold": False
     }
     
@@ -384,6 +451,9 @@ def main():
     logger.info("--- Fase 2b: Criando tabela Silver AI Classificação Relatos ---")
     results["SilverAiClassificacaoRelatos"] = create_silver_ai_classificacao_relatos_table()
 
+    logger.info("--- Fase 2c: Criando tabelas do backfill histórico ---")
+    results["HistoricalBackfill"] = create_historical_backfill_tables()
+
     # Executa criação das tabelas Gold
     logger.info("--- Fase 3: Criando tabelas Gold ---")
     results["Gold"] = create_gold_tables()
@@ -395,6 +465,7 @@ def main():
     logger.info(f"  Bronze: {'SUCESSO' if results['Bronze'] else 'FALHA'}")
     logger.info(f"  Silver: {'SUCESSO' if results['Silver'] else 'FALHA'}")
     logger.info(f"  SilverAiClassificacaoRelatos: {'SUCESSO' if results['SilverAiClassificacaoRelatos'] else 'FALHA'}")
+    logger.info(f"  HistoricalBackfill: {'SUCESSO' if results['HistoricalBackfill'] else 'FALHA'}")
     logger.info(f"  Gold:   {'SUCESSO' if results['Gold'] else 'FALHA'}")
     logger.info("=" * 60)
     

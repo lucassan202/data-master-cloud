@@ -136,6 +136,8 @@ celerybeat.pid
 
 # Environments
 .env
+.terraform/
+terraform.tfstate*
 .envrc
 .venv
 env/
@@ -211,9 +213,20 @@ __marimo__/
 *.hcl
 .vscode
 *.pdf
+/docs
 *.html
 *.png
 /scripts/
+!/scripts/
+!/scripts/airflow-init.sh
 .codex
 /tmp
 /output/slides
+
+.lambda_venv_csv
+.lambda_venv_screp
+
+*.plan
+sa-vinhedo-1
+/tests
+airflow/

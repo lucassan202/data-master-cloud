@@ -12,6 +12,9 @@ locals {
 
   # Bucket de dados conforme padrão do script Python: {env}-{region}-data-master
   data_bucket_name = "${var.env}-${var.awslogs_region}-data-master"
+  data_bucket_arn  = "arn:aws:s3:::${local.data_bucket_name}"
+
+  lambda_download_function_name = "${var.lambda_function_name}-${var.env}"
 
   # DNS Cloud Map que a Lambda usa para alcançar o Selenium
   selenium_dns = "selenium.${var.cloudmap_namespace_name}"

@@ -32,10 +32,20 @@ class MediaAvaliacao:
                 .select('nomefantasia', 'datRefCarga', 'mediaAvaliacao')
             )
 
-            spark.sql(f"DELETE FROM g_consumidor.mediaavaliacao WHERE datRefCarga = '{datRefCarga}'")
-            log.info(f"Dados anteriores removidos para datRefCarga: {datRefCarga}")
+            if consumidor.limit(1).count() == 0:
+                log.warning(
+                    "Nenhum dado encontrado para datRefCarga: %s. "
+                    "Nenhuma gravação será realizada.",
+                    datRefCarga,
+                )
+                return
 
-            consumidor.write.mode("append").insertInto("g_consumidor.mediaavaliacao")
+            (
+                consumidor.write
+                .mode("overwrite")
+                .option("replaceWhere", f"datRefCarga = '{datRefCarga}'")
+                .saveAsTable("g_consumidor.mediaavaliacao")
+            )
             log.info("MediaAvaliacao — job finalizado com sucesso")
 
         except Exception as e:

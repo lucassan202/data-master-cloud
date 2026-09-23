@@ -13,8 +13,14 @@ resource "databricks_notebook" "bronze_screp_notebook" {
   source   = "../app/src/bronze_screp.py"
 }
 
+resource "databricks_notebook" "bronze_kaggle_historico_notebook" {
+  path     = "${data.databricks_current_user.me.home}/${var.notebook_subdirectory}/bronze_kaggle_historico.py"
+  language = var.notebook_language
+  source   = "../app/src/bronze_kaggle_historico.py"
+}
+
 output "notebook_url" {
- value = databricks_notebook.bronze_notebook.url
+  value = databricks_notebook.bronze_notebook.url
 }
 
 resource "databricks_notebook" "silver_notebook" {

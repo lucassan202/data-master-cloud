@@ -66,7 +66,7 @@ def drop_bronze_tables() -> bool:
         logger.info("Iniciando drop das tabelas Bronze")
         
         # Tabelas do database Bronze
-        tables = ["consumidor", "consumidor_dia"]
+        tables = ["consumidor", "consumidor_dia", "consumidor_historico"]
         
         if not drop_tables_in_database("b_consumidor", tables):
             return False
@@ -91,7 +91,10 @@ def drop_silver_tables() -> bool:
         logger.info("Iniciando drop das tabelas Silver")
         
         # Tabelas do database Silver
-        tables = ["consumidorservicosfinanceiros"]
+        tables = [
+            "consumidorservicosfinanceiros",
+            "ai_classificacao_relatos_historico",
+        ]
         
         if not drop_tables_in_database("s_consumidor", tables):
             return False
@@ -124,7 +127,10 @@ def drop_gold_tables() -> bool:
             "reclamacaouf",
             "ai_status",
             "ai_nota",
-            "ai_macro_categoria"
+            "ai_macro_categoria",
+            "ai_status_historico",
+            "ai_nota_historico",
+            "ai_macro_categoria_historico",
         ]
         
         if not drop_tables_in_database("g_consumidor", tables):

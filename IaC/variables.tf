@@ -91,19 +91,6 @@ variable "health_check_path" {
   default     = "/"
 }
 
-variable "ecs_task_execution_role_arn" {
-  description = "ARN da IAM Role de execução das tasks ECS"
-  type        = string
-}
-
-# ---------------------------------------------------------------------------
-# Lambda — geral
-# ---------------------------------------------------------------------------
-variable "lambda_execution_role_arn" {
-  description = "ARN da IAM Role de execução da Lambda screp"
-  type        = string
-}
-
 variable "lambda_timeout" {
   description = "Timeout das funções Lambda em segundos"
   type        = number
@@ -128,12 +115,6 @@ variable "lambda_memory_size" {
   description = "Memória da Lambda download-csv em MB"
   type        = number
   default     = 512
-}
-
-variable "lambda_role_arn" {
-  description = "ARN da IAM Role existente para execução da Lambda"
-  type        = string
-  default     = "arn:aws:iam::120945137272:role/lambda_execution_role"
 }
 
 # ---------------------------------------------------------------------------
@@ -163,7 +144,98 @@ variable "datrefcarga" {
   type        = string
 }
 
-variable "emails" {
-  description = "Lista de e-mails para notificação de sucesso ou falha"
+variable "notification_emails" {
+  description = "Lista de e-mails para notificação de falha no Databricks e Airflow"
   type        = list(string)
+  default     = ["lucas_san20@hotmail.com"]
+}
+
+variable "databricks_grant_principal" {
+  description = "Usuário ou grupo Databricks que receberá os GRANTs nas tabelas"
+  type        = string
+  default     = "lucas_san20@hotmail.com"
+}
+
+variable "airflow_admin_username" {
+  description = "Usuário administrador do Airflow"
+  type        = string
+  default     = "admin"
+}
+
+variable "airflow_admin_password" {
+  description = "Senha do administrador do Airflow"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "airflow_admin_email" {
+  description = "E-mail do administrador do Airflow"
+  type        = string
+  default     = "admin@example.com"
+}
+
+variable "airflow_smtp_host" {
+  description = "Host SMTP usado pelo Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_port" {
+  description = "Porta SMTP usada pelo Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_user" {
+  description = "Usuário SMTP usado pelo Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_password" {
+  description = "Senha SMTP usada pelo Airflow"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "airflow_smtp_mail_from" {
+  description = "Endereço remetente SMTP do Airflow"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_starttls" {
+  description = "Indica se o Airflow deve habilitar STARTTLS"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_smtp_ssl" {
+  description = "Indica se o Airflow deve habilitar SSL SMTP"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_notification_emails" {
+  description = "Destinatários das notificações do Airflow separados por vírgula"
+  type        = string
+  default     = ""
+}
+
+variable "airflow_kaggle_backfill_mes" {
+  description = "Mês inicial ou atual do backfill histórico Kaggle no formato YYYY-MM"
+  type        = string
+  default     = "2022-07"
+  validation {
+    condition     = can(regex("^(DONE|[0-9]{4}-(0[1-9]|1[0-2]))$", var.airflow_kaggle_backfill_mes))
+    error_message = "airflow_kaggle_backfill_mes deve estar no formato YYYY-MM ou DONE."
+  }
+}
+
+variable "airflow_ssh_cidr_blocks" {
+  description = "CIDRs autorizados a acessar SSH e a UI do Airflow"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }

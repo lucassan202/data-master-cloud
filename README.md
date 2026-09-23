@@ -29,64 +29,47 @@ cd data-master-cloud
 
 ---
 
-### 2. Configure as variáveis de infraestrutura
+### 2. Configure as variáveis e suba o ambiente
 
-Edite o arquivo `IaC/terraform.tfvars` com os valores do seu ambiente:
-
-```hcl
-project     = "data-master"
-environment = "dev"
-aws_region  = "us-east-2"
-```
-
-Variáveis sensíveis (Databricks) devem ser configuradas como **secrets no GitHub Actions** ou exportadas como variáveis de ambiente locais:
+Copie o arquivo de exemplo, preencha as variáveis necessárias e mantenha o
+arquivo `.env` apenas localmente, pois ele pode conter credenciais:
 
 ```bash
-export TF_VAR_databricks_host="https://<workspace>.azuredatabricks.net"
-export TF_VAR_databricks_client_id="<client-id>"
-export TF_VAR_databricks_client_secret="<client-secret>"
+cp .env.example .env
 ```
 
----
+Preencha as variáveis de acordo com o uso desejado:
 
-### 3. Empacote as funções Lambda
+| Grupo | Variáveis | Observação |
+|---|---|---|
+| Airflow | `AIRFLOW_ADMIN_USERNAME`, `AIRFLOW_ADMIN_PASSWORD`, `AIRFLOW_ADMIN_EMAIL` | Credenciais do usuário administrador local. |
+| SMTP obrigatório | `AIRFLOW__SMTP__SMTP_HOST`, `AIRFLOW__SMTP__SMTP_PORT`, `AIRFLOW__SMTP__SMTP_MAIL_FROM` | Necessárias para inicializar o Airflow local. |
+| SMTP opcional | `AIRFLOW__SMTP__SMTP_USER`, `AIRFLOW__SMTP__SMTP_PASSWORD`, `AIRFLOW__SMTP__SMTP_STARTTLS`, `AIRFLOW__SMTP__SMTP_SSL` | Preencha conforme o servidor SMTP. |
+| Notificações | `AIRFLOW_NOTIFICATION_EMAILS` | E-mails separados por vírgula. |
+| AWS | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | As credenciais podem ser omitidas quando a AWS CLI usa profile, role ou outro mecanismo padrão. |
+| Databricks | `DATABRICKS_HOST`, `DATABRICKS_TOKEN` | Necessárias para a execução local das DAGs e jobs que acessam o Databricks. |
+| Jobs | `AIRFLOW_ENV`, `DAT_REF_CARGA`, `DAT_REF_CARGA_M`, `KAGGLE_BACKFILL_MES`, `PROJECT`, `ECS_CLUSTER`, `ECS_SERVICE`, `LAMBDA_SCREP`, `LAMBDA_DOWNLOAD` | Parâmetros dos jobs; `KAGGLE_BACKFILL_MES` inicia o backfill histórico em `2022-07`. |
+| Terraform remoto | `TF_STATE_BUCKET`, `TF_LOCK_TABLE` | Opcionais. Sem `TF_STATE_BUCKET`, o Terraform usa state local. `TF_LOCK_TABLE` só é usada quando o backend S3 está configurado. |
+
+O state remoto S3 é recomendado para ambientes compartilhados. Para uso local,
+deixe `TF_STATE_BUCKET` e `TF_LOCK_TABLE` vazias. Não alterne entre state local
+e remoto sem migrar o state Terraform conscientemente.
 
 ```bash
-make all
+make build-all
 ```
 
-Isso cria os arquivos `lambda_function.zip` (downloader CSV) e `selenium_layer.zip` (layer do Selenium).
+O comando prepara os pacotes das Lambdas, provisiona a infraestrutura,
+configura o bucket e inicia os serviços locais. Por padrão, usa o ambiente
+`dev` e a região `us-east-2`.
 
----
-
-### 4. Inicialize o Terraform
+Para sobrescrever esses valores:
 
 ```bash
-terraform -chdir=IaC init
+make build-all ENVIRONMENT=pro AWS_REGION=us-east-2
 ```
 
-Para ambientes distintos, use workspaces:
-
-```bash
-terraform -chdir=IaC workspace new dev
-terraform -chdir=IaC workspace select dev
-```
-
----
-
-### 5. Planeje e aplique a infraestrutura
-
-```bash
-# Visualize as mudanças
-terraform -chdir=IaC plan
-
-# Aplique
-terraform -chdir=IaC apply
-```
-
----
-
-### 6. CI/CD via GitHub Actions
+### CI/CD via GitHub Actions
 
 O deploy automatizado é ativado por push na branch:
 
@@ -101,6 +84,29 @@ O workflow reusável está em [.github/workflows/terraform.yml](.github/workflow
 3. Executa `terraform init / plan / apply`
 
 > Para destruir a infraestrutura, defina `"destroy": true` em `IaC/destroy_config.json` e abra um PR.
+
+### Destruir os recursos localmente
+
+Para destruir automaticamente os recursos da aplicação gerenciados pelo Terraform:
+
+```bash
+make terraform-destroy
+```
+
+O comando não pede confirmação. Para destruir outro ambiente ou usar outra região:
+
+```bash
+make terraform-destroy ENVIRONMENT=pro AWS_REGION=us-east-2
+```
+
+Esse alvo destrói somente os recursos da aplicação em `IaC`. Os buckets de
+bootstrap e de state gerenciados em `IaC/buckets` não são destruídos. Se estiver
+usando state remoto, configure `TF_STATE_BUCKET` e `TF_LOCK_TABLE` no `.env` para
+que o comando opere sobre o mesmo backend e workspace usados no deploy.
+
+### Airflow
+
+O ambiente `pro` provisiona o Airflow em uma EC2 AWS `t3.medium`, com PostgreSQL RDS privado, sincronização dos DAGs pelo bucket S3 e acesso inicial à UI na porta 8080.
 
 ---
 

@@ -16,21 +16,50 @@ log = logging.getLogger("silver_ai_classificacao_relatos")
 class SilverAiClassificacaoRelatos:
 
     @staticmethod
-    def run(log, datRefCarga, llm_model):
+    def run(log, datRefCarga, llm_model, modo="diario"):
 
-        TARGET_TABLE = "s_consumidor.ai_classificacao_relatos"
+        if modo not in {"diario", "historico"}:
+            raise ValueError("modo deve ser 'diario' ou 'historico'.")
+
+        is_historical = modo == "historico"
+        input_table = (
+            "b_consumidor.consumidor_historico"
+            if is_historical
+            else "b_consumidor.consumidor_dia"
+        )
+        target_table = (
+            "s_consumidor.ai_classificacao_relatos_historico"
+            if is_historical
+            else "s_consumidor.ai_classificacao_relatos"
+        )
+        source_filter = (
+            "lower(trim(origem.nomeempresa)) = 'banco santander' "
+            "AND lower(trim(origem.status)) = 'não resolvido'"
+            if is_historical
+            else "origem.nomeempresa LIKE '%Santander%'"
+        )
+        target_filter = (
+            "AND NOT EXISTS ("
+            "SELECT 1 FROM s_consumidor.ai_classificacao_relatos_historico done "
+            "WHERE done.fonte = 'kaggle' "
+            "AND done.source_record_id = origem.source_record_id)"
+            if is_historical
+            else ""
+        )
 
         try:
             log.info(
-                f"Iniciando Silver AI Classificação Relatos — datRefCarga: {datRefCarga}, llm_model: {llm_model}"
+                f"Iniciando Silver AI Classificação Relatos — datRefCarga: {datRefCarga}, "
+                f"llm_model: {llm_model}, modo: {modo}"
             )
 
-            spark.sql(f"""
+            classificacao = spark.sql(f"""
                 WITH base AS (
-                  SELECT *
-                  FROM b_consumidor.consumidor_dia
-                  WHERE nomeempresa LIKE '%Santander%'
-                    AND datrefcarga = '{datRefCarga}'
+                  SELECT origem.*
+                  FROM {input_table} origem
+                  WHERE {source_filter}
+                    AND origem.datrefcarga = '{datRefCarga}'
+                    {target_filter}
                 ),
 
                 macro AS (
@@ -300,9 +329,27 @@ Regras:
                   FROM resposta
                 )
 
-                INSERT INTO {TARGET_TABLE}
                 SELECT * FROM resposta_reanalise
             """)  # noqa: F821
+
+            if classificacao.limit(1).count() == 0 and not is_historical:
+                raise ValueError(
+                    f"Nenhum dado encontrado para datRefCarga: {datRefCarga}"
+                )
+
+            if classificacao.limit(1).count() == 0 and is_historical:
+                log.info("Nenhum novo registro histórico para %s.", datRefCarga)
+                return
+
+            if is_historical:
+                classificacao.write.mode("append").saveAsTable(target_table)
+            else:
+                (
+                    classificacao.write
+                    .mode("overwrite")
+                    .option("replaceWhere", f"datrefcarga = '{datRefCarga}'")
+                    .saveAsTable(target_table)
+                )
 
             log.info(f"Silver AI Classificação Relatos — job finalizado com sucesso para datRefCarga: {datRefCarga}")
 
@@ -318,9 +365,11 @@ if __name__ == "__main__":
     # Parâmetros recebidos via Databricks Widgets
     dbutils.widgets.text("datRefCarga", "")  # noqa: F821
     dbutils.widgets.text("llm_model", "databricks-qwen3-next-80b-a3b-instruct")  # noqa: F821
+    dbutils.widgets.text("modo", "diario")  # noqa: F821
 
     datRefCarga = dbutils.widgets.get("datRefCarga")  # noqa: F821
     llm_model = dbutils.widgets.get("llm_model")  # noqa: F821
+    modo = dbutils.widgets.get("modo")  # noqa: F821
 
     if not datRefCarga:
         raise ValueError("O parâmetro 'datRefCarga' é obrigatório e não foi informado.")
@@ -331,7 +380,7 @@ if __name__ == "__main__":
     log.info(f"Parâmetros recebidos — datRefCarga: {datRefCarga}, llm_model: {llm_model}")
 
     try:
-        SilverAiClassificacaoRelatos.run(log, datRefCarga, llm_model)
+        SilverAiClassificacaoRelatos.run(log, datRefCarga, llm_model, modo)
     except Exception as e:
         log.error(f"Job Silver AI Classificação Relatos encerrado com falha: {e}", exc_info=True)
         raise
