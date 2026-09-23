@@ -23,6 +23,9 @@ resource "aws_lambda_function" "download_csv_lambda" {
     Environment = var.environment
     Project     = "data-master-cloud"
   }
+
+  # Create/adopt the Terraform-managed group before the Lambda can use it.
+  depends_on = [aws_cloudwatch_log_group.lambda_download]
 }
 
 resource "aws_cloudwatch_log_group" "lambda_download" {
