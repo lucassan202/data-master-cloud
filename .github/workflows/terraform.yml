@@ -29,6 +29,28 @@ on:
         required: false
       TF_LOCK_TABLE:
         required: false
+      AIRFLOW_ADMIN_USERNAME:
+        required: false
+      AIRFLOW_ADMIN_PASSWORD:
+        required: false
+      AIRFLOW_ADMIN_EMAIL:
+        required: false
+      AIRFLOW__SMTP__SMTP_HOST:
+        required: false
+      AIRFLOW__SMTP__SMTP_PORT:
+        required: false
+      AIRFLOW__SMTP__SMTP_USER:
+        required: false
+      AIRFLOW__SMTP__SMTP_PASSWORD:
+        required: false
+      AIRFLOW__SMTP__SMTP_MAIL_FROM:
+        required: false
+      AIRFLOW__SMTP__SMTP_STARTTLS:
+        required: false
+      AIRFLOW__SMTP__SMTP_SSL:
+        required: false
+      AIRFLOW_NOTIFICATION_EMAILS:
+        required: false
 
 jobs:
   terraform:
@@ -42,7 +64,18 @@ jobs:
       S3_BUCKET: ${{ inputs.environment }}-${{ inputs.aws-region }}-data-master
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID  }}
-      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET  }}      
+      DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET  }}
+      TF_VAR_airflow_admin_username: ${{ secrets.AIRFLOW_ADMIN_USERNAME }}
+      TF_VAR_airflow_admin_password: ${{ secrets.AIRFLOW_ADMIN_PASSWORD }}
+      TF_VAR_airflow_admin_email: ${{ secrets.AIRFLOW_ADMIN_EMAIL }}
+      TF_VAR_airflow_smtp_host: ${{ secrets.AIRFLOW__SMTP__SMTP_HOST }}
+      TF_VAR_airflow_smtp_port: ${{ secrets.AIRFLOW__SMTP__SMTP_PORT }}
+      TF_VAR_airflow_smtp_user: ${{ secrets.AIRFLOW__SMTP__SMTP_USER }}
+      TF_VAR_airflow_smtp_password: ${{ secrets.AIRFLOW__SMTP__SMTP_PASSWORD }}
+      TF_VAR_airflow_smtp_mail_from: ${{ secrets.AIRFLOW__SMTP__SMTP_MAIL_FROM }}
+      TF_VAR_airflow_smtp_starttls: ${{ secrets.AIRFLOW__SMTP__SMTP_STARTTLS }}
+      TF_VAR_airflow_smtp_ssl: ${{ secrets.AIRFLOW__SMTP__SMTP_SSL }}
+      TF_VAR_airflow_notification_emails: ${{ secrets.AIRFLOW_NOTIFICATION_EMAILS }}
 
     steps:
       - name: Checkout
