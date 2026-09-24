@@ -13,6 +13,10 @@ python3 -m venv /opt/airflow/venv
 /opt/airflow/venv/bin/pip install --upgrade pip wheel setuptools
 /opt/airflow/venv/bin/pip install "apache-airflow[amazon,postgres,databricks]==2.10.4" apache-airflow-providers-amazon apache-airflow-providers-databricks --constraint https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.10.txt
 CFG_PASSWORD=$(/opt/airflow/venv/bin/python3 -c "import urllib.parse; print(urllib.parse.quote('''${db_password}''', safe=''))")
+# airflow.cfg is parsed by Python's ConfigParser, where '%' starts an
+# interpolation expression. Escape URL-encoded percent signs in the file;
+# ConfigParser will unescape them when Airflow reads the connection string.
+CFG_PASSWORD_CONFIG="$${CFG_PASSWORD//%/%%}"
 cat > /home/airflow/airflow/airflow.cfg <<CFG
 [core]
 dags_folder = /home/airflow/airflow/dags
@@ -20,7 +24,7 @@ executor = LocalExecutor
 load_examples = False
 default_timezone = UTC
 [database]
-sql_alchemy_conn = postgresql+psycopg2://${db_user}:$CFG_PASSWORD@${db_host}:${db_port}/${db_name}
+sql_alchemy_conn = postgresql+psycopg2://${db_user}:$CFG_PASSWORD_CONFIG@${db_host}:${db_port}/${db_name}
 [webserver]
 web_server_port = 8080
 expose_config = False
