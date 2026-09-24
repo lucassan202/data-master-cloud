@@ -164,6 +164,8 @@ jobs:
               --query "logGroups[?logGroupName=='${LOG_GROUP_NAME}'].logGroupName | [0]" \
               --output text | grep -Fxq "$LOG_GROUP_NAME"; then
             terraform import -input=false \
+              -var="env=$ENVIRONMENT" \
+              -var="environment=$ENVIRONMENT" \
               aws_cloudwatch_log_group.lambda_download "$LOG_GROUP_NAME"
           fi
 
