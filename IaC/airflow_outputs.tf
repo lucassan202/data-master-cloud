@@ -1,6 +1,6 @@
 output "airflow_url" {
   description = "URL do Airflow em produção"
-  value       = local.airflow_enabled ? "http://${aws_instance.airflow[0].public_ip}:8080" : null
+  value       = local.airflow_enabled ? "https://${aws_instance.airflow[0].public_ip}" : null
 }
 
 output "airflow_public_ip" {

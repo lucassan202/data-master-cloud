@@ -106,7 +106,9 @@ que o comando opere sobre o mesmo backend e workspace usados no deploy.
 
 ### Airflow
 
-O ambiente `pro` provisiona o Airflow em uma EC2 AWS `t3.medium`, com PostgreSQL RDS privado, sincronização dos DAGs pelo bucket S3 e acesso inicial à UI na porta 8080.
+O ambiente `pro` provisiona o Airflow em uma EC2 AWS `t3.medium`, com PostgreSQL RDS privado, sincronização dos DAGs pelo bucket S3 e acesso à UI via HTTPS. O Airflow escuta somente localmente na porta 8080, enquanto o Nginx atende nas portas 80 e 443 e redireciona HTTP para HTTPS.
+
+O output `airflow_url` usa o IP público atual da EC2 e pode mudar quando a instância for recriada. O certificado TLS é autoassinado e gerado durante o bootstrap para esse IP; por isso, o navegador exibirá um aviso de certificado não confiável. Use `curl -k` para testes automatizados.
 
 ---
 
