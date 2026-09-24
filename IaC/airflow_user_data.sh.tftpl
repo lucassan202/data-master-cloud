@@ -3,7 +3,7 @@ set -euo pipefail
 exec > >(tee /var/log/airflow-bootstrap.log) 2>&1
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y python3 python3-venv python3-dev python3-pip build-essential libpq-dev postgresql-client curl unzip cron sudo
+apt-get install -y python3 python3-venv python3-dev python3-pip build-essential libpq-dev postgresql-client curl unzip cron sudo nginx openssl
 curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
 unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
 rm -rf /tmp/awscliv2.zip /tmp/aws
@@ -13,6 +13,45 @@ python3 -m venv /opt/airflow/venv
 /opt/airflow/venv/bin/pip install --upgrade pip wheel setuptools
 /opt/airflow/venv/bin/pip install "apache-airflow[amazon,postgres,databricks]==2.10.4" apache-airflow-providers-amazon apache-airflow-providers-databricks --constraint https://raw.githubusercontent.com/apache/airflow/constraints-2.10.4/constraints-3.10.txt
 CFG_PASSWORD=$(/opt/airflow/venv/bin/python3 -c "import urllib.parse; print(urllib.parse.quote('''${db_password}''', safe=''))")
+IMDS_TOKEN=$(curl -fsS -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+PUBLIC_IP=$(curl -fsS -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4)
+install -d -m 700 /etc/airflow/tls
+openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+  -keyout /etc/airflow/tls/airflow.key \
+  -out /etc/airflow/tls/airflow.crt \
+  -subj "/CN=$PUBLIC_IP" \
+  -addext "subjectAltName = IP:$PUBLIC_IP"
+chmod 600 /etc/airflow/tls/airflow.key
+cat > /etc/nginx/sites-available/airflow <<NGINX
+server {
+    listen 80;
+    server_name _;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name _;
+    ssl_certificate /etc/airflow/tls/airflow.crt;
+    ssl_certificate_key /etc/airflow/tls/airflow.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+NGINX
+rm -f /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/airflow /etc/nginx/sites-enabled/airflow
+nginx -t
+systemctl enable nginx
 cat > /home/airflow/airflow/airflow.cfg <<CFG
 [core]
 dags_folder = /home/airflow/airflow/dags
@@ -22,7 +61,10 @@ default_timezone = UTC
 [database]
 sql_alchemy_conn = postgresql+psycopg2://${db_user}:$CFG_PASSWORD@${db_host}:${db_port}/${db_name}
 [webserver]
+web_server_host = 127.0.0.1
 web_server_port = 8080
+base_url = https://$PUBLIC_IP
+enable_proxy_fix = True
 expose_config = False
 [logging]
 base_log_folder = /home/airflow/airflow/logs
@@ -94,4 +136,4 @@ WantedBy=multi-user.target
 UNIT
 done
 systemctl daemon-reload
-systemctl enable --now airflow-webserver airflow-scheduler
+systemctl enable --now nginx airflow-webserver airflow-scheduler

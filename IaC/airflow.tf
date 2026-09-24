@@ -42,9 +42,16 @@ resource "aws_security_group" "airflow" {
   description = "Airflow EC2 access"
   vpc_id      = module.vpc.vpc_id
   ingress {
-    description = "Airflow Web UI"
-    from_port   = 8080
-    to_port     = 8080
+    description = "Airflow HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.airflow_ssh_cidr_blocks
+  }
+  ingress {
+    description = "Airflow HTTP redirect"
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
     cidr_blocks = var.airflow_ssh_cidr_blocks
   }
@@ -181,15 +188,15 @@ resource "aws_instance" "airflow" {
     delete_on_termination = true
   }
   user_data = templatefile("${path.module}/airflow_user_data.sh.tftpl", {
-    db_host                = aws_db_instance.airflow[0].address, db_port = aws_db_instance.airflow[0].port,
-    db_name                = aws_db_instance.airflow[0].db_name, db_user = aws_db_instance.airflow[0].username,
-    db_password            = random_password.airflow_db[0].result, s3_dags_path = local.airflow_dags_path,
-    aws_region             = var.awslogs_region, airflow_admin_username = var.airflow_admin_username,
-    airflow_admin_password = var.airflow_admin_password, airflow_admin_email = var.airflow_admin_email,
-    airflow_smtp_host      = var.airflow_smtp_host, airflow_smtp_port = var.airflow_smtp_port,
-    airflow_smtp_user      = var.airflow_smtp_user, airflow_smtp_password = var.airflow_smtp_password,
-    airflow_smtp_mail_from = var.airflow_smtp_mail_from, airflow_smtp_starttls = var.airflow_smtp_starttls,
-    airflow_smtp_ssl       = var.airflow_smtp_ssl, airflow_notification_emails = var.airflow_notification_emails,
+    db_host                     = aws_db_instance.airflow[0].address, db_port = aws_db_instance.airflow[0].port,
+    db_name                     = aws_db_instance.airflow[0].db_name, db_user = aws_db_instance.airflow[0].username,
+    db_password                 = random_password.airflow_db[0].result, s3_dags_path = local.airflow_dags_path,
+    aws_region                  = var.awslogs_region, airflow_admin_username = var.airflow_admin_username,
+    airflow_admin_password      = var.airflow_admin_password, airflow_admin_email = var.airflow_admin_email,
+    airflow_smtp_host           = var.airflow_smtp_host, airflow_smtp_port = var.airflow_smtp_port,
+    airflow_smtp_user           = var.airflow_smtp_user, airflow_smtp_password = var.airflow_smtp_password,
+    airflow_smtp_mail_from      = var.airflow_smtp_mail_from, airflow_smtp_starttls = var.airflow_smtp_starttls,
+    airflow_smtp_ssl            = var.airflow_smtp_ssl, airflow_notification_emails = var.airflow_notification_emails,
     airflow_kaggle_backfill_mes = var.airflow_kaggle_backfill_mes
   })
   tags = merge(local.common_tags, { Name = "${local.name_prefix}-airflow" })
